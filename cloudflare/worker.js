@@ -33,6 +33,14 @@ async function grab(url, secs, maxBytes) {
   return buf;
 }
 
+// Whisper 결과에서 [단어, 시작초, 끝초] 목록 (조각 맨 앞이 0초)
+function wordTimes(out) {
+  const words = [], add = w => { const t = String(w.word || '').trim(); if (t) words.push([t, Math.round(w.start * 100) / 100, Math.round(w.end * 100) / 100]); };
+  for (const sg of out?.segments || []) for (const w of sg.words || []) add(w);
+  if (!words.length) for (const w of out?.words || []) add(w);
+  return words;
+}
+
 function b64(u8) {
   let s = '';
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
@@ -59,7 +67,7 @@ export default {
         if (audio.length < 8000) return json({ text: '' });
         const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true });
         const text = String(out?.text || '').trim();
-        const res = { text };
+        const res = { text, words: wordTimes(out) };
         if (url.searchParams.get('ko') === '1' && text) {
           const tr = await env.AI.run('@cf/meta/m2m100-1.2b', { text, source_lang: 'english', target_lang: 'korean' });
           res.ko = String(tr?.translated_text || '').trim();
@@ -82,7 +90,10 @@ export default {
         const prompt = (url.searchParams.get('prompt') || '').slice(-300);
         if (prompt) input.initial_prompt = prompt;
         const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', input);
-        return json({ text: String(out?.text || '').trim() });
+        // 단어마다 이 조각 안에서 몇 초에 말했는지 [단어, 시작, 끝] → 앱이 지금 말하는 단어를 짚어 줌
+        const res = { text: String(out?.text || '').trim(), words: wordTimes(out) };
+        if (url.searchParams.get('debug') === '1') res.raw = JSON.stringify(out).slice(0, 1500);
+        return json(res);
       } catch (e) {
         return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
       }

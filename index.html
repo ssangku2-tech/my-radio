@@ -112,6 +112,8 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .capb[aria-pressed=true]{background:var(--brass);border-color:var(--brass);color:var(--wal2);font-weight:700}
 .capx{height:4.35em;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font-size:17px;line-height:1.45;color:var(--ivory)}
 .capen.wait{color:#bfae8c;font-size:14px}
+.capen{color:#d9c9a6}.capen .wnow{color:#1d140d;background:var(--brass-l);border-radius:4px;padding:0 3px;margin:0 -3px;box-shadow:0 0 10px rgba(255,190,90,.45);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.capen .wnew{color:var(--ivory)}
 .capko{display:none;font-size:16px;line-height:1.45;color:var(--brass-l);min-height:2.9em;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cap.ko .capx{height:1.45em;font-size:15px;color:#cdbd9a}.cap.ko .capko{display:-webkit-box}
 .capon{margin:-6px 0 12px;border:1px dashed rgba(240,228,200,.35);background:none;color:#d9c9a6;border-radius:99px;font-size:13px;padding:4px 12px;min-height:32px}
@@ -540,26 +542,34 @@ const capClock=()=>CAP.mode==='sync'?au.currentTime:performance.now()/1000;
 const capReset=mode=>{capRun++;CAP.mode=mode;CAP.segs=[];CAP.prompt='';CAP.shown='';CAP.lastSent='';
  $('#capEn').textContent=mode==='sync'?'소리에 맞춰 자막을 준비하고 있어요…':'자막을 받아오는 중… (몇 초 걸려요)';$('#capEn').classList.add('wait');
  $('#capKoLine').textContent='';$('#capNote').textContent=mode==='sync'?'· 영어 · 소리에 맞춤':'· 영어 · 몇 초 늦음'};
-const capSeg=(start,end,text)=>{CAP.segs.push({start,end,w:text.split(' ')});CAP.segs.sort((a,b)=>a.start-b.start);
+// wt: [[단어, 조각 안 시작초, 끝초], …] (받아쓰기가 알려 준 단어별 시간) → 재생 시계 기준으로 바꿔 둠
+const capSeg=(start,end,text,wt)=>{const g={start,end,w:text.split(' ')};
+ if(wt&&wt.length){g.w=[];g.ts=[];g.te=[];for(const[x,s,e]of wt){const c=String(x).replace(/^(\.{2,}|…)/,'').replace(/(\.{2,}|…)$/,'');
+  if(!c)continue;g.w.push(c);g.ts.push(start+s);g.te.push(start+e)}if(!g.w.length)return;g.end=Math.max(g.end,g.te[g.te.length-1])}
+ CAP.segs.push(g);CAP.segs.sort((a,b)=>a.start-b.start);
  const t=capClock();CAP.segs=CAP.segs.filter(g=>g.end>t-90)};
 // 앱이 재생 중인 소리 조각 → 받아쓰기
 const capSend=(my,bytes,start,end)=>{if(!capOn)return;
  fetch(`${WORKER}/transcribe?prompt=${encodeURIComponent(CAP.prompt.slice(-200))}`,{method:'POST',body:bytes})
   .then(r=>r.json()).then(j=>{if(my!==mse||CAP.mode!=='sync')return;const t=capClean(j.text);if(!t)return;
-   CAP.prompt=(CAP.prompt+' '+t).slice(-400);capSeg(start,end,t)}).catch(()=>{})};
+   CAP.prompt=(CAP.prompt+' '+t).slice(-400);capSeg(start,end,t,j.words)}).catch(()=>{})};
 // PC 스피커 등: 워커가 방송을 직접 몇 초 받아써 줌. 받는 즉시 이어서 흘려 보여 줌.
 const capLoop=async()=>{const my=capRun,s=cur;
  while(my===capRun&&capOn&&capShow()&&cur===s){
   try{const r=await fetch(`${WORKER}/caption?id=${s.cap}`,{cache:'no-store'});const j=await r.json();
    if(my!==capRun)return;const t=capClean(j.text);
-   if(t){const now=performance.now()/1000,last=CAP.segs.length?CAP.segs[CAP.segs.length-1].end:0,st=Math.max(now,last);capSeg(st,st+5,t)}
+   if(t){const now=performance.now()/1000,last=CAP.segs.length?CAP.segs[CAP.segs.length-1].end:0,st=Math.max(now,last);capSeg(st,st+5,t,j.words)}
    else if(j.error)await new Promise(z=>setTimeout(z,5000))}
   catch(e){await new Promise(z=>setTimeout(z,5000))}}};
 // 0.15초마다: 지금 들리는 데까지 단어를 채워 2~3줄로 보여 줌, 문장이 끝나면 한글 번역
-const capTick=()=>{const t=capClock();let w=[];
- for(const g of CAP.segs){if(t<g.start)break;const k=t>=g.end?g.w.length:Math.ceil(g.w.length*(t-g.start)/Math.max(.5,g.end-g.start));w=w.concat(g.w.slice(0,k))}
- const text=w.join(' ');if(text===CAP.shown)return;CAP.shown=text;
- const el=$('#capEn');el.classList.remove('wait');el.textContent=w.slice(-60).join(' ');
+// 단어별 시간이 있으면: 말한 단어까지만 보이고, 지금 말하는 단어는 황동색으로 강조 (말과 단어가 함께 움직임)
+const capTick=()=>{const t=capClock();let w=[],now=-1;
+ for(const g of CAP.segs){if(t<g.start)break;
+  if(g.ts){for(let i=0;i<g.w.length;i++){if(g.ts[i]>t)break;w.push(g.w[i]);if(t<g.te[i]+.2)now=w.length-1}}
+  else{const k=t>=g.end?g.w.length:Math.ceil(g.w.length*(t-g.start)/Math.max(.5,g.end-g.start));w=w.concat(g.w.slice(0,k));if(t<g.end)now=w.length-1}}
+ const key=w.length+':'+now;if(key===CAP.shown)return;CAP.shown=key;const text=w.join(' ');
+ const el=$('#capEn');el.classList.remove('wait');const vis=w.slice(-60),off=w.length-vis.length;
+ el.innerHTML=vis.map((x,i)=>i+off===now?`<span class="wnow">${esc(x)}</span>`:i+off>w.length-8?`<span class="wnew">${esc(x)}</span>`:esc(x)).join(' ');
  if(capKo){const m=text.match(/[^.?!]+[.?!]+(?=\s|$)/g);const sent=m&&m[m.length-1].trim();
   if(sent&&sent!==CAP.lastSent){CAP.lastSent=sent;const my=capRun;
    fetch(`${WORKER}/translate?text=${encodeURIComponent(sent)}`).then(r=>r.json()).then(j=>{if(my===capRun&&j.ko)$('#capKoLine').textContent=j.ko}).catch(()=>{})}}};
