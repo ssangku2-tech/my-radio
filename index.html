@@ -118,6 +118,10 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .capon{margin:-6px 0 12px;border:1px dashed rgba(240,228,200,.35);background:none;color:#d9c9a6;border-radius:99px;font-size:13px;padding:4px 12px;min-height:32px}
 .slp{position:relative;flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;min-height:44px;font-weight:700;color:var(--ink);white-space:nowrap}
 .slp svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.pwr{flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;min-height:44px;font-weight:700;background:none;color:var(--mute);white-space:nowrap}
+.pwr svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.pwr.live{color:#fff;background:#8c2f1f;border-color:#8c2f1f;box-shadow:0 2px 0 #5c1d12}
+.pwr.live:active{transform:translateY(1px);box-shadow:none}
 .slp.on{border-color:var(--brass);background:light-dark(#f3e5c6,#33261a)}
 .slp select{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer;font-size:16px}
 .slp:focus-within{outline:3px solid #2f7cf6;outline-offset:2px}
@@ -176,8 +180,9 @@ footer{color:var(--mute);font-size:13px}
  .kwrap{width:66px;height:66px}.knob{width:50px;height:50px}.vstep{width:38px;height:38px}.vstep svg{width:18px;height:18px}.vol{gap:3px}
  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 27px 9px;min-height:58px}.st b{font-size:16.5px}.fav{width:26px!important;height:26px!important;right:1px!important;top:1px!important;font-size:14px!important}.st b{font-size:17px}.st span{font-size:12px}
  .tab{font-size:16px}.top h1{font-size:18px}.slp{padding:0 12px}
- .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}}
-@media(max-width:360px){.tab{font-size:15px}.slp span{display:none}}
+ .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}
+ .tools{gap:6px}.seg svg{display:none}.slp,.pwr{padding:0 10px;gap:4px}}
+@media(max-width:360px){.tab{font-size:15px}.slp span,.pwr span{display:none}}
 </style>
 </head>
 <body>
@@ -222,6 +227,7 @@ footer{color:var(--mute);font-size:13px}
   </div>
   <label class="slp" id="slp"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" stroke-linejoin="round"/></svg><span id="sleepLbl">취침</span>
    <select id="sleep" aria-label="취침 타이머"><option value="0">취침 타이머 끄기</option><option value="15">15분 뒤 끄기</option><option value="30">30분 뒤 끄기</option><option value="60">1시간 뒤 끄기</option><option value="90">1시간 30분 뒤 끄기</option><option value="120">2시간 뒤 끄기</option></select></label>
+  <button class="pwr" id="pwrOff" aria-label="라디오 끄기" title="라디오 끄기"><svg viewBox="0 0 24 24"><path d="M12 3v8M7.1 6.2a7.5 7.5 0 109.8 0" stroke-linecap="round"/></svg><span>끄기</span></button>
  </div>
 </section>
 
@@ -363,7 +369,7 @@ const setState=(t)=>{const el=$('#state');el.textContent=t;el.hidden=['ON AIR','
  $('#outPc').classList.toggle('live',t==='PC에서 재생 중')};
 const killHls=()=>{if(hls){hls.destroy();hls=null}stopMse()};
 const play=async(s,isRetry)=>{
- if(!s)return;cur=s;want=true;if(!isRetry){retry=0;s._native=0}
+ if(!s)return;cur=s;want=true;pwrUi();if(!isRetry){retry=0;s._native=0}
  setNeedle(s);
  $('#nowName').textContent=s.n;$('#nowDesc').textContent=s.d||'';
  setState('연결 중…');save('last',s.id);
@@ -416,7 +422,8 @@ const blocked=e=>{if(e&&e.name==='NotAllowedError'){setState('▶ 눌러서 재�
 const fail=()=>{if(!want)return;if(retry<3){retry++;setState(`다시 연결 중 (${retry}/3)`);setTimeout(()=>want&&play(cur,true),1500*retry)}else{setState('연결 실패');want=false;setPlaying(false);toast('이 채널은 지금 안 나와요. 다른 채널을 골라 보세요.')}};
 const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.load();setPlaying(false);setState('정지');
  if(out==='pc'&&pcCode){setState('PC 끄는 중…');pcSend({a:'stop'})}};
-const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);
+const pwrUi=()=>$('#pwrOff').classList.toggle('live',!!(playing||want));
+const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);pwrUi();
  $('#playIco').innerHTML=v?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>':'<path d="M7 4v16l13-8z"/>';
  if('mediaSession' in navigator)navigator.mediaSession.playbackState=v?'playing':'paused';try{capUi()}catch(e){}};
 au.addEventListener('playing',()=>{retry=0;setPlaying(true);setState('ON AIR')});
@@ -482,6 +489,8 @@ if('mediaSession' in navigator){const m=navigator.mediaSession;
 
 // 취침 타이머 (마지막 30초 동안 서서히 작아짐)
 let sleepAt=0;
+$('#pwrOff').onclick=()=>{if(!(playing||want)&&!(out==='pc'&&pcCode)){toast('라디오가 꺼져 있어요');return}
+ sleepAt=0;$('#sleep').value='0';stop();pwrUi();toast(out==='pc'?'PC 스피커 라디오를 껐어요':'라디오를 껐어요')};
 $('#sleep').onchange=e=>{const m=+e.target.value;sleepAt=m?Date.now()+m*60000:0;toast(m?`${m}분 뒤에 꺼집니다`:'취침 타이머를 껐어요');tick()};
 const sleepUi=left=>{$('#slp').classList.toggle('on',left>0);
  $('#sleepLbl').textContent=left>0?`${Math.floor(left/60)}:${String(Math.floor(left%60)).padStart(2,'0')}`:'취침'};
