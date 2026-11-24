@@ -8,8 +8,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#e23b24",
-  "theme_color": "#e23b24",
+  "background_color": "#3d2a1d",
+  "theme_color": "#3d2a1d",
   "categories": ["music", "news", "entertainment"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
@@ -22,6 +22,6 @@
     { "name": "마지막 채널 바로 듣기", "url": "./#resume", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ],
   "screenshots": [
-    { "src": "docs/preview-desktop.jpg", "sizes": "800x562", "type": "image/jpeg", "form_factor": "wide", "label": "나만의 라디오" }
+    { "src": "docs/preview-desktop.jpg", "sizes": "1280x900", "type": "image/jpeg", "form_factor": "wide", "label": "나만의 라디오" }
   ]
 }
