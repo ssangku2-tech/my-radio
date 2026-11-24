@@ -55,7 +55,7 @@ export default {
       const src = CAPTION[url.searchParams.get('id') || ''];
       if (!src) return json({ error: 'no captions for this station' }, 400);
       try {
-        const audio = await grab(src, 10, 200000);   // ~10초 (128kbps 기준 160KB)
+        const audio = await grab(src, 6, 100000);    // PC 스피커일 때만 씀: ~6초
         if (audio.length < 8000) return json({ text: '' });
         const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true });
         const text = String(out?.text || '').trim();
@@ -65,6 +65,35 @@ export default {
           res.ko = String(tr?.translated_text || '').trim();
         }
         return json(res);
+      } catch (e) {
+        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+      }
+    }
+    // POST /transcribe?prompt=...  앱이 지금 재생 중인 소리 3초 조각(바이트)을 보내면 받아쓴 글을 돌려줌.
+    // prompt: 바로 앞 자막 (문장이 조각 사이에서 끊겨도 이어지게)
+    if (url.pathname === '/transcribe') {
+      if (req.method === 'OPTIONS') return new Response(null, { headers: { ...CORS, 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
+      if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+      try {
+        const audio = new Uint8Array(await req.arrayBuffer());
+        if (audio.length < 2000) return json({ text: '' });
+        if (audio.length > 400000) return json({ error: 'too long' }, 413);
+        const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
+        const prompt = (url.searchParams.get('prompt') || '').slice(-300);
+        if (prompt) input.initial_prompt = prompt;
+        const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', input);
+        return json({ text: String(out?.text || '').trim() });
+      } catch (e) {
+        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+      }
+    }
+    // GET /translate?text=...  영어 한 문장을 한국어로
+    if (url.pathname === '/translate') {
+      const text = (url.searchParams.get('text') || '').slice(0, 600);
+      if (!text) return json({ ko: '' });
+      try {
+        const tr = await env.AI.run('@cf/meta/m2m100-1.2b', { text, source_lang: 'english', target_lang: 'korean' });
+        return json({ ko: String(tr?.translated_text || '').trim() });
       } catch (e) {
         return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
       }

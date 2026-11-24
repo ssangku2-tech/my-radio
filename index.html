@@ -110,9 +110,10 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .capt{flex:1;font-size:12px;color:var(--brass-l);font-weight:700}.capt small{font-weight:400;color:#bfae8c}
 .capb{border:1px solid rgba(240,228,200,.3);background:none;color:#d9c9a6;border-radius:99px;font-size:12px;padding:3px 10px;min-height:28px}
 .capb[aria-pressed=true]{background:var(--brass);border-color:var(--brass);color:var(--wal2);font-weight:700}
-.capx{max-height:7.6em;overflow-y:auto;font-size:16px;line-height:1.5;color:var(--ivory);scrollbar-width:none}
-.capx::-webkit-scrollbar{display:none}
-.capx p{margin:0 0 6px}.capx p.old{color:#a8977f}.capx .ko{display:block;color:var(--brass-l);font-size:15px}.capw{color:#bfae8c;font-size:14px}
+.capx{height:4.35em;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font-size:17px;line-height:1.45;color:var(--ivory)}
+.capen.wait{color:#bfae8c;font-size:14px}
+.capko{display:none;font-size:16px;line-height:1.45;color:var(--brass-l);min-height:2.9em;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cap.ko .capx{height:1.45em;font-size:15px;color:#cdbd9a}.cap.ko .capko{display:-webkit-box}
 .capon{margin:-6px 0 12px;border:1px dashed rgba(240,228,200,.35);background:none;color:#d9c9a6;border-radius:99px;font-size:13px;padding:4px 12px;min-height:32px}
 .slp{position:relative;flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;min-height:44px;font-weight:700;color:var(--ink);white-space:nowrap}
 .slp svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
@@ -192,8 +193,9 @@ footer{color:var(--mute);font-size:13px}
   </div>
   <div class="mrow"><div class="meter" aria-hidden="true" id="meter"></div><span class="lamp" id="state" role="status" hidden>대기 중</span></div>
   <div class="cap" id="cap" hidden>
-   <div class="caph"><span class="capt">실시간 자막 <small>· 영어 받아쓰기, 10초쯤 늦어요</small></span><button class="capb" id="capKo" aria-pressed="false">한글</button><button class="capb" id="capOff">끄기</button></div>
-   <div class="capx" id="capx" aria-live="polite"><p class="capw">자막을 받아오는 중…</p></div>
+   <div class="caph"><span class="capt">실시간 자막 <small id="capNote">· 영어</small></span><button class="capb" id="capKo" aria-pressed="false">한글</button><button class="capb" id="capOff">끄기</button></div>
+   <div class="capx" id="capx"><div class="capen" id="capEn"></div></div>
+   <div class="capko" id="capKoLine" aria-live="polite"></div>
   </div>
   <button class="capon" id="capOn" hidden>자막 켜기</button>
   <div class="panel">
@@ -278,7 +280,7 @@ const ST=[
  {id:'wnyc',cap:'wnyc',n:'WNYC 93.9',g:'en',c:'talk',d:'미국 뉴욕 · 공영',u:'https://fm939.wnyc.org/wnycfm'},
  {id:'cnn',cap:'cnn',n:'CNN',g:'en',c:'news',d:'미국 · 뉴스 오디오',u:'https://tunein.cdnstream1.com/2868_96.mp3'},
  {id:'lbc',cap:'lbc',n:'LBC',g:'en',c:'news',d:'영국 · 뉴스·토크',u:'https://media-ice.musicradio.com/LBCUKMP3'},
- {id:'times',cap:'times',n:'Times Radio',g:'en',c:'news',d:'영국 · 뉴스',u:'https://timesradio.wireless.radio/stream'},
+ {id:'times',cap:'times',mime:'audio/aac',n:'Times Radio',g:'en',c:'news',d:'영국 · 뉴스',u:'https://timesradio.wireless.radio/stream'},
  {id:'kexp',n:'KEXP 90.3',g:'en',c:'music',d:'미국 시애틀 · 인디',u:'https://kexp-mp3-128.streamguys1.com/kexp128.mp3'},
  {id:'classicfm',n:'Classic FM',g:'en',c:'classic',d:'영국 · 클래식',u:'https://media-ice.musicradio.com/ClassicFMMP3'},
  {id:'wqxr',n:'WQXR',g:'en',c:'classic',d:'미국 뉴욕 · 클래식',u:'https://stream.wqxr.org/wqxr'},
@@ -352,7 +354,7 @@ const resolve=async s=>{
 
 const setState=(t)=>{const el=$('#state');el.textContent=t;el.hidden=['ON AIR','정지','대기 중','PC에서 재생 중'].includes(t);
  $('#outPc').classList.toggle('live',t==='PC에서 재생 중')};
-const killHls=()=>{if(hls){hls.destroy();hls=null}};
+const killHls=()=>{if(hls){hls.destroy();hls=null}stopMse()};
 const play=async(s,isRetry)=>{
  if(!s)return;cur=s;want=true;if(!isRetry){retry=0;s._native=0}
  setNeedle(s);
@@ -367,6 +369,7 @@ const play=async(s,isRetry)=>{
   want=false;setPlaying(false);return}
  if(cur!==s)return;
  killHls();au.pause();
+ if(useMse(s)){playMse(s,url);return}
  if(/\.m3u8/i.test(url)&&window.Hls&&Hls.isSupported()){
   hls=new Hls({lowLatencyMode:false});hls.loadSource(url);hls.attachMedia(au);
   hls.on(Hls.Events.ERROR,(_,d)=>{if(!d.fatal)return;
@@ -376,6 +379,32 @@ const play=async(s,isRetry)=>{
  }else{au.src=url;au.play().catch(blocked)}
  mediaMeta();
 };
+// 자막 방송: 방송 소리를 앱이 직접 받아 재생하면서(MediaSource), 같은 소리를 4초씩 잘라 받아쓰기에 보냄.
+// 처음 5초를 모아 두고 재생을 시작하므로, 자막이 그 부분을 들을 때 맞춰 나옴.
+const CAP_SEC=4,START_BUF=5;let mse=null;
+const useMse=s=>!!(s.cap&&capOn&&!s._nomse&&window.MediaSource&&MediaSource.isTypeSupported(s.mime||'audio/mpeg'));
+const stopMse=()=>{if(mse){mse.dead=1;try{mse.ctrl.abort()}catch(e){}mse=null}};
+const joinU8=a=>{let n=0;for(const x of a)n+=x.length;const o=new Uint8Array(n);let i=0;for(const x of a){o.set(x,i);i+=x.length}return o};
+const playMse=async(s,url)=>{stopMse();const my=mse={s,ctrl:new AbortController(),q:[],pend:null,bytes:[],start:0,started:0};
+ capFor=s;capReset('sync');setState('자막 맞추는 중…');
+ const ms=new MediaSource();au.src=URL.createObjectURL(ms);
+ await new Promise(r=>ms.addEventListener('sourceopen',r,{once:true}));if(my.dead)return;
+ let sb;try{sb=ms.addSourceBuffer(s.mime||'audio/mpeg');sb.mode='sequence'}catch(e){s._nomse=1;play(s,true);return}
+ const end=()=>sb.buffered.length?sb.buffered.end(sb.buffered.length-1):0;
+ const pump=()=>{if(my.dead||sb.updating||!my.q.length)return;const c=joinU8(my.q);my.q=[];my.pend=c;
+  try{sb.appendBuffer(c)}catch(e){my.q.unshift(c);my.pend=null}};
+ sb.addEventListener('updateend',()=>{if(my.dead)return;
+  if(my.pend){my.bytes.push(my.pend);my.pend=null;const e=end();
+   if(e-my.start>=CAP_SEC){capSend(my,joinU8(my.bytes),my.start,e);my.start=e;my.bytes=[]}
+   if(!my.started&&e>=START_BUF){my.started=1;au.play().catch(blocked)}
+   const t=au.currentTime;if(t>60&&sb.buffered.start(0)<t-45){try{sb.remove(0,t-30);return}catch(x){}}}
+  pump()});
+ sb.addEventListener('error',()=>{if(!my.dead){s._nomse=1;fail()}});
+ let r;try{r=await fetch(url,{signal:my.ctrl.signal,cache:'no-store'})}catch(e){if(!my.dead){s._nomse=1;fail()}return}
+ if(!r.ok||!r.body){s._nomse=1;fail();return}
+ const rd=r.body.getReader();
+ try{while(!my.dead){const{value,done}=await rd.read();if(done)break;my.q.push(value);pump()}}catch(e){}
+ if(!my.dead&&want)fail()};
 const blocked=e=>{if(e&&e.name==='NotAllowedError'){setState('▶ 눌러서 재생');want=false}};
 const fail=()=>{if(!want)return;if(retry<3){retry++;setState(`다시 연결 중 (${retry}/3)`);setTimeout(()=>want&&play(cur,true),1500*retry)}else{setState('연결 실패');want=false;setPlaying(false);toast('이 채널은 지금 안 나와요. 다른 채널을 골라 보세요.')}};
 const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.load();setPlaying(false);setState('정지');
@@ -492,29 +521,52 @@ $('#grid').addEventListener('contextmenu',e=>{const s=e.target.closest('.st');if
 
 const last=byId(load('last',''));if(last){cur=last;setNeedle(last);$('#nowName').textContent=last.n;$('#nowDesc').textContent='▶ 를 누르면 이어서 듣습니다.'}
 render();
-if(location.hash==='#resume'&&last){play(last)}
+if(location.hash==='#resume'&&last){setTimeout(()=>play(last),0)}
 
-// 실시간 자막: 영어 뉴스 방송이면 워커가 지금 소리를 10초씩 받아써 줌 (Whisper). 끝나면 바로 다음 조각을 요청.
-let capOn=load('capOn',true),capKo=load('capKo',false),capRun=0,capLast='';
+// 실시간 자막 (영어 뉴스). 받아쓴 조각마다 '언제 들리는 소리인지'(start~end)를 붙여 두고,
+// 재생 위치가 거기 오면 그 시간 동안 단어를 한 개씩 채워 보여 줌 → 말소리에 맞춰 자막이 흘러감.
+// sync: 앱이 직접 재생(MediaSource) → 재생 시계에 맞춤 / live: PC 스피커 등 → 받는 대로 바로 흘려 보여 줌.
+let capOn=load('capOn',true),capKo=load('capKo',false),capRun=0,capFor=null,capT=null;
+const CAP={mode:'',segs:[],prompt:'',shown:'',lastSent:''};
 const capShow=()=>!!(cur&&cur.cap&&(playing||want));
-const capAdd=(en,ko)=>{const x=$('#capx');x.querySelector('.capw')?.remove();
- // 앞 조각과 겹친 앞부분은 잘라냄
- const prev=capLast.split(' ').slice(-6).join(' ');if(prev&&en.startsWith(prev))en=en.slice(prev.length).trim();if(!en)return;capLast=en;
- x.querySelectorAll('p').forEach(p=>p.classList.add('old'));
- const p=document.createElement('p');p.textContent=en;if(ko){const k=document.createElement('span');k.className='ko';k.textContent=ko;p.appendChild(k)}
- x.appendChild(p);while(x.children.length>8)x.firstChild.remove();x.scrollTop=x.scrollHeight};
-const capLoop=async()=>{const my=++capRun,s=cur;
+const capClean=t=>{t=String(t||'').replace(/\s+/g,' ').trim().replace(/^(\.{2,}|…)\s*/,'').replace(/\s*(\.{2,}|…)$/,'');return /^(thank you|thanks for watching|you|bye|\.+)[.!]*$/i.test(t)?'':t};
+const capClock=()=>CAP.mode==='sync'?au.currentTime:performance.now()/1000;
+const capReset=mode=>{capRun++;CAP.mode=mode;CAP.segs=[];CAP.prompt='';CAP.shown='';CAP.lastSent='';
+ $('#capEn').textContent=mode==='sync'?'소리에 맞춰 자막을 준비하고 있어요…':'자막을 받아오는 중… (몇 초 걸려요)';$('#capEn').classList.add('wait');
+ $('#capKoLine').textContent='';$('#capNote').textContent=mode==='sync'?'· 영어 · 소리에 맞춤':'· 영어 · 몇 초 늦음'};
+const capSeg=(start,end,text)=>{CAP.segs.push({start,end,w:text.split(' ')});CAP.segs.sort((a,b)=>a.start-b.start);
+ const t=capClock();CAP.segs=CAP.segs.filter(g=>g.end>t-90)};
+// 앱이 재생 중인 소리 조각 → 받아쓰기
+const capSend=(my,bytes,start,end)=>{if(!capOn)return;
+ fetch(`${WORKER}/transcribe?prompt=${encodeURIComponent(CAP.prompt.slice(-200))}`,{method:'POST',body:bytes})
+  .then(r=>r.json()).then(j=>{if(my!==mse||CAP.mode!=='sync')return;const t=capClean(j.text);if(!t)return;
+   CAP.prompt=(CAP.prompt+' '+t).slice(-400);capSeg(start,end,t)}).catch(()=>{})};
+// PC 스피커 등: 워커가 방송을 직접 몇 초 받아써 줌. 받는 즉시 이어서 흘려 보여 줌.
+const capLoop=async()=>{const my=capRun,s=cur;
  while(my===capRun&&capOn&&capShow()&&cur===s){
-  try{const r=await fetch(`${WORKER}/caption?id=${s.cap}${capKo?'&ko=1':''}`,{cache:'no-store'});const j=await r.json();
-   if(my!==capRun||cur!==s)return;if(j.text)capAdd(j.text,j.ko);else if(j.error)await new Promise(z=>setTimeout(z,5000))}
+  try{const r=await fetch(`${WORKER}/caption?id=${s.cap}`,{cache:'no-store'});const j=await r.json();
+   if(my!==capRun)return;const t=capClean(j.text);
+   if(t){const now=performance.now()/1000,last=CAP.segs.length?CAP.segs[CAP.segs.length-1].end:0,st=Math.max(now,last);capSeg(st,st+5,t)}
+   else if(j.error)await new Promise(z=>setTimeout(z,5000))}
   catch(e){await new Promise(z=>setTimeout(z,5000))}}};
-let capFor=null;
-const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);$('#capOn').hidden=!(show&&!capOn);
- if(show&&capOn){if(capFor!==cur){capFor=cur;capLast='';$('#capx').innerHTML='<p class="capw">자막을 받아오는 중… (10초쯤 걸려요)</p>';capLoop()}}
- else{capRun++;capFor=null}};
+// 0.15초마다: 지금 들리는 데까지 단어를 채워 2~3줄로 보여 줌, 문장이 끝나면 한글 번역
+const capTick=()=>{const t=capClock();let w=[];
+ for(const g of CAP.segs){if(t<g.start)break;const k=t>=g.end?g.w.length:Math.ceil(g.w.length*(t-g.start)/Math.max(.5,g.end-g.start));w=w.concat(g.w.slice(0,k))}
+ const text=w.join(' ');if(text===CAP.shown)return;CAP.shown=text;
+ const el=$('#capEn');el.classList.remove('wait');el.textContent=w.slice(-60).join(' ');
+ if(capKo){const m=text.match(/[^.?!]+[.?!]+(?=\s|$)/g);const sent=m&&m[m.length-1].trim();
+  if(sent&&sent!==CAP.lastSent){CAP.lastSent=sent;const my=capRun;
+   fetch(`${WORKER}/translate?text=${encodeURIComponent(sent)}`).then(r=>r.json()).then(j=>{if(my===capRun&&j.ko)$('#capKoLine').textContent=j.ko}).catch(()=>{})}}};
+const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);$('#capOn').hidden=!(show&&!capOn);$('#cap').classList.toggle('ko',capKo);
+ if(show&&capOn){const mode=mse&&mse.s===cur?'sync':'live';
+  if(capFor!==cur||CAP.mode!==mode){capFor=cur;capReset(mode);if(mode==='live')capLoop()}
+  if(!capT)capT=setInterval(capTick,150)}
+ else{capRun++;capFor=null;CAP.mode='';if(capT){clearInterval(capT);capT=null}}};
 $('#capOff').onclick=()=>{capOn=false;save('capOn',false);capUi()};
-$('#capOn').onclick=()=>{capOn=true;save('capOn',true);capUi()};
-$('#capKo').onclick=()=>{capKo=!capKo;save('capKo',capKo);$('#capKo').setAttribute('aria-pressed',capKo)};
+$('#capOn').onclick=()=>{capOn=true;save('capOn',true);
+ // 이 기기에서 듣는 중이면 소리에 맞춘 방식으로 다시 연결
+ if(out==='phone'&&cur&&cur.cap&&(playing||want)&&!mse)play(cur);else capUi()};
+$('#capKo').onclick=()=>{capKo=!capKo;save('capKo',capKo);$('#capKo').setAttribute('aria-pressed',capKo);CAP.lastSent='';CAP.shown='';$('#capKoLine').textContent='';capUi()};
 $('#capKo').setAttribute('aria-pressed',capKo);
 
 // PC 스피커 (노트4 서버 경유)
