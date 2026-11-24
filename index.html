@@ -62,6 +62,9 @@ button{cursor:pointer}
 .vol input{flex:1;accent-color:#fff;height:44px}
 .inst{background:#fff;color:var(--red);border:0;border-radius:99px;padding:8px 16px;min-height:40px;font-weight:700}
 .inst[hidden]{display:none}
+.seg{border:0;background:rgba(255,255,255,.16);color:#fff;min-height:44px;padding:8px 16px;font-weight:600}
+.seg:first-child{border-radius:10px 0 0 10px}.seg:nth-child(2){border-radius:0 10px 10px 0;margin-left:-8px}
+.seg[aria-pressed=true]{background:#fff;color:var(--red)}
 .tr{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .vol output{width:3ch;text-align:right;font-variant-numeric:tabular-nums}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -130,6 +133,10 @@ footer{color:var(--mute);font-size:13px}
      <input type="range" id="vol" min="0" max="100" value="70" aria-label="볼륨">
      <output id="volOut">70</output>
     </div>
+    <div class="row" role="group" aria-label="소리 나오는 곳">
+     <button class="seg" id="outPhone" aria-pressed="true">이 기기</button><button class="seg" id="outPc" aria-pressed="false">PC 스피커</button>
+     <span class="small" id="pcInfo"></span>
+    </div>
     <div class="row">
      <select class="sel" id="sleep" aria-label="취침 타이머">
       <option value="0">취침 타이머 끔</option><option value="15">15분 뒤 끄기</option><option value="30">30분 뒤 끄기</option><option value="60">1시간 뒤 끄기</option><option value="90">1시간 30분 뒤 끄기</option><option value="120">2시간 뒤 끄기</option>
@@ -169,6 +176,10 @@ footer{color:var(--mute);font-size:13px}
    <p class="lead">정한 시각에 지금 채널(없으면 마지막 채널)을 작게 틀고 천천히 키웁니다. 이 창이 열려 있어야 울려요.</p>
    <div class="field"><input type="time" id="alarmT" aria-label="알람 시각"><button class="btn" id="alarmBtn">알람 켜기</button></div>
    <div class="small" id="alarmInfo" style="opacity:1;color:var(--mute)"></div>
+   <h2 style="margin-top:22px">PC 스피커 연결</h2>
+   <p class="lead">집 PC의 HDMI 스피커로 소리를 보냅니다. 노트4 서버가 받아서 PC의 'PC 스피커' 창에서 틀어 줘요. 밖에서 데이터로도 됩니다. 처음 한 번만 연결 코드를 넣으세요.</p>
+   <form class="field" id="pcForm"><input id="pcCode" placeholder="연결 코드" aria-label="PC 스피커 연결 코드" autocomplete="off"><button class="btn">저장</button></form>
+   <div class="small" id="pcCodeInfo" style="opacity:1;color:var(--mute)"></div>
   </div>
   <div class="box">
    <h2>단축키</h2>
@@ -185,7 +196,7 @@ footer{color:var(--mute);font-size:13px}
   </div>
  </div>
 </section>
-<footer class="band wrap" id="foot">방송 주소는 각 방송사가 바꾸면 안 나올 수 있습니다. 그럴 땐 '전 세계 방송 찾기'에서 같은 이름을 찾아 즐겨찾기 해 두세요.</footer>
+<footer class="band wrap" id="foot">방송 주소는 각 방송사가 바꾸면 안 나올 수 있습니다. 그럴 땐 "전 세계 방송 찾기"에서 같은 이름을 찾아 즐겨찾기 해 두세요. MBC 방송 주소는 Cloudflare 워커(cloudflare/worker.js)가 받아 옵니다.</footer>
 <div class="toast" id="toast" role="status"></div>
 <audio id="au" preload="none"></audio>
 
@@ -249,6 +260,10 @@ let recent=load('recent',[]);
 let stats=load('stats',{});
 let tab=load('tab','all'),cat='all',q='';
 let cur=null,playing=false,hls=null,retry=0,want=false;
+// MBC 주소는 Cloudflare 워커가, PC 스피커 명령은 ntfy → 노트4 서버가 받아 PC 'PC 스피커' 창으로 전달
+const WORKER='https://my-radio.ssangku2.workers.dev',NTFY='https://ntfy.sh';
+let out=load('out','phone'),pcCode=load('pcCode','');
+const pcSend=m=>fetch(`${NTFY}/${pcCode}-radio`,{method:'POST',body:JSON.stringify(m)}).catch(()=>toast('인터넷 연결을 확인해 주세요'));
 const au=$('#au');
 const all=()=>ST.concat(mine);
 const byId=id=>all().find(s=>s.id===id);
@@ -292,7 +307,7 @@ const toggleFav=id=>{const i=favs.indexOf(id);if(i>-1)favs.splice(i,1);else favs
 const resolve=async s=>{
  if(s.kbs){const r=await fetch(`https://cfpwwwapi.kbs.co.kr/api/v1/landing/live/channel_code/${s.kbs}`);const j=await r.json();const it=(j.channel_item||[]).find(x=>/m3u8/.test(x.service_url||''))||j.channel_item[0];return it.service_url}
  if(s.sbs){const r=await fetch(`https://apis.sbs.co.kr/play-api/1.0/livestream/${s.sbs}?protocol=hls&ssl=Y`);return (await r.text()).trim()}
- if(s.mbc){if(!/^http/.test(location.protocol))throw new Error('mbc-file');let t='';try{const r=await fetch('mbc?ch='+s.mbc,{cache:'no-store'});if(r.ok)t=(await r.text()).trim()}catch(e){}if(!/^https:\/\/\S+m3u8/.test(t))throw new Error('mbc-file');return t.split(/\s+/)[0]}
+ if(s.mbc){const r=await fetch(`${WORKER}/mbc?ch=${s.mbc}`,{cache:'no-store'});const t=(await r.text()).trim();if(!r.ok||!/^https:\/\/\S+m3u8/.test(t))throw new Error('mbc');return t}
  return s.u};
 
 const setState=(t)=>{$('#state').textContent=t};
@@ -303,10 +318,11 @@ const play=async(s,isRetry)=>{
  $('#nowName').textContent=s.n;$('#nowDesc').textContent=s.d||'';$('#where').textContent=s.g==='kr'?'한국':s.g==='en'?'해외':'내 채널';
  setState('연결 중…');save('last',s.id);
  recent=[s.id].concat(recent.filter(x=>x!==s.id)).slice(0,12);save('recent',recent);render();
+ mediaMeta();
+ if(out==='pc'){killHls();au.pause();pcCast(s);return}
  let url;
  try{url=await resolve(s)}catch(err){
-  if(err.message==='mbc-file'){setState('재생 불가');$('#nowDesc').textContent='MBC는 MBC 정책상 PC에서 "라디오 켜기"로 실행했을 때만 나옵니다.';}
-  else{setState('연결 실패');toast('방송 주소를 받아오지 못했어요');}
+  setState('연결 실패');toast('방송 주소를 받아오지 못했어요');
   want=false;setPlaying(false);return}
  if(cur!==s)return;
  killHls();au.pause();
@@ -321,14 +337,15 @@ const play=async(s,isRetry)=>{
 };
 const blocked=e=>{if(e&&e.name==='NotAllowedError'){setState('▶ 눌러서 재생');want=false}};
 const fail=()=>{if(!want)return;if(retry<3){retry++;setState(`다시 연결 중 (${retry}/3)`);setTimeout(()=>want&&play(cur,true),1500*retry)}else{setState('연결 실패');want=false;setPlaying(false);toast('이 채널은 지금 안 나와요. 다른 채널을 골라 보세요.')}};
-const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.load();setPlaying(false);setState('정지');};
+const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.load();setPlaying(false);setState('정지');
+ if(out==='pc'&&pcCode){setState('PC 끄는 중…');pcSend({a:'stop'})}};
 const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);
  $('#playIco').innerHTML=v?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>':'<path d="M7 4v16l13-8z"/>';
  if('mediaSession' in navigator)navigator.mediaSession.playbackState=v?'playing':'paused'};
 au.addEventListener('playing',()=>{retry=0;setPlaying(true);setState('ON AIR')});
 au.addEventListener('waiting',()=>want&&setState('버퍼링…'));
 au.addEventListener('error',()=>{if(!hls)fail()});
-au.addEventListener('pause',()=>{if(!want)setPlaying(false)});
+au.addEventListener('pause',()=>{if(!want&&out!=='pc')setPlaying(false)});
 let stallT;au.addEventListener('stalled',()=>{clearTimeout(stallT);stallT=setTimeout(()=>{if(want&&au.paused===false&&au.readyState<3)fail()},12000)});
 
 $('#play').onclick=()=>{if(playing||want)stop();else play(cur||byId(load('last','kbs1fm'))||ST[0])};
@@ -338,10 +355,12 @@ $('#favNow').onclick=()=>cur&&toggleFav(cur.id);
 
 // 볼륨
 const volEl=$('#vol');let muted=false;
-const setVol=v=>{v=Math.max(0,Math.min(100,v));volEl.value=v;$('#volOut').textContent=v;au.volume=(v/100)**2;save('vol',v);if(v>0&&muted){muted=false;au.muted=false;volIco()}};
+let volT;
+const setVol=v=>{v=Math.max(0,Math.min(100,v));volEl.value=v;$('#volOut').textContent=v;au.volume=(v/100)**2;save('vol',v);if(v>0&&muted){muted=false;au.muted=false;volIco()}
+ if(out==='pc'&&pcCode){clearTimeout(volT);volT=setTimeout(()=>pcSend({a:'vol',v}),400)}};
 const volIco=()=>{$('#mute').classList.toggle('on',muted);$('#volIco').innerHTML=muted?'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2"/>':'<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" stroke="currentColor" stroke-width="2" fill="none"/>'};
 volEl.addEventListener('input',()=>setVol(+volEl.value));
-$('#mute').onclick=()=>{muted=!muted;au.muted=muted;volIco()};
+$('#mute').onclick=()=>{muted=!muted;au.muted=muted;volIco();if(out==='pc'&&pcCode)pcSend({a:'vol',v:muted?0:+volEl.value})};
 volEl.addEventListener('wheel',e=>{e.preventDefault();setVol(+volEl.value+(e.deltaY<0?5:-5))},{passive:false});
 setVol(load('vol',70));volIco();
 
@@ -423,11 +442,44 @@ $('#cForm').onsubmit=e=>{e.preventDefault();const n=$('#cName').value.trim(),u=$
 $('#grid').addEventListener('contextmenu',e=>{const s=e.target.closest('.st');if(!s||!/^(my_|rb_)/.test(s.dataset.id))return;e.preventDefault();
  mine=mine.filter(m=>m.id!==s.dataset.id);favs=favs.filter(f=>f!==s.dataset.id);save('mine',mine);save('favs',favs);render();toast('내 채널에서 지웠어요')});
 
-if(!/^http/.test(location.protocol))$('#foot').textContent='지금은 파일로 직접 열었어요. MBC까지 들으려면 폴더의 "라디오 켜기"를 더블클릭해서 여세요. '+$('#foot').textContent;
 const last=byId(load('last',''));if(last){cur=last;$('#nowName').textContent=last.n;$('#nowDesc').textContent='▶ 를 누르면 이어서 듣습니다.'}
 if(location.hash==='#fav'){tab='fav'}
 render();
 if(location.hash==='#resume'&&last){play(last)}
+
+// PC 스피커 (노트4 서버 경유)
+let es=null,pcWait=null;
+const castOf=s=>s.kbs?{kind:'kbs',v:String(s.kbs)}:s.sbs?{kind:'sbs',v:s.sbs}:s.mbc?{kind:'mbc',v:s.mbc}:{kind:'url',v:s.u};
+const pcInfo=t=>{$('#pcInfo').textContent=t};
+const pcTimeout=(ms,msg)=>{clearTimeout(pcWait);pcWait=setTimeout(()=>{if(out!=='pc')return;want=false;setPlaying(false);setState('응답 없음');pcInfo('노트4 서버 응답 없음');toast(msg)},ms)};
+const pcCast=s=>{if(!pcCode){setOut('phone');toast('PC 스피커 연결 코드를 먼저 넣어 주세요');return}
+ setState('PC로 보내는 중…');pcInfo('');pcListen();
+ pcSend(Object.assign({a:'cast',name:s.n,vol:muted?0:+volEl.value,id:Date.now()},castOf(s)));
+ pcTimeout(20000,'노트4 서버가 응답하지 않아요. 노트4와 PC의 PC 스피커 창이 켜져 있는지 확인해 주세요.')};
+const pcState=m=>{if(!m||m.t!=='st'||out!=='pc')return;clearTimeout(pcWait);
+ if(!m.online){want=false;setPlaying(false);setState('PC 꺼짐');pcInfo('PC의 PC 스피커 창이 닫혀 있어요');return}
+ pcInfo(m.on?`PC: ${String(m.title||'').replace(/^\S+\s/,'')} · 소리 ${m.vol}%`:'PC 스피커 연결됨');
+ if(m.on){want=true;setPlaying(true);setState('PC에서 재생 중')}
+ else{want=false;setPlaying(false);setState(m.re==='cast'?'PC 재생 실패':'정지')}};
+const pcListen=()=>{if(es||!pcCode||!window.EventSource)return;
+ es=new EventSource(`${NTFY}/${pcCode}-radio-st/sse`);
+ es.addEventListener('message',e=>{try{const d=JSON.parse(e.data);pcState(JSON.parse(d.message))}catch(x){}})};
+const pcClose=()=>{if(es){es.close();es=null}clearTimeout(pcWait)};
+const outUi=()=>{$('#outPhone').setAttribute('aria-pressed',out==='phone');$('#outPc').setAttribute('aria-pressed',out==='pc');if(out!=='pc')pcInfo('')};
+const setOut=o=>{if(o===out)return;
+ if(o==='pc'&&!pcCode){toast('아래 "PC 스피커 연결"에 코드를 먼저 넣어 주세요');$('#pcCode').scrollIntoView({block:'center'});$('#pcCode').focus();return}
+ const was=(playing||want)&&cur;if(was)stop();
+ out=o;save('out',o);outUi();
+ if(o==='pc'){pcListen();setTimeout(()=>pcSend({a:'ping'}),300);pcTimeout(15000,'노트4 서버가 응답하지 않아요.')}else pcClose();
+ if(was)setTimeout(()=>play(cur),o==='pc'?600:200)};
+$('#outPhone').onclick=()=>setOut('phone');$('#outPc').onclick=()=>setOut('pc');
+const codeUi=()=>{$('#pcCodeInfo').textContent=pcCode?'연결 코드가 저장돼 있어요. 위의 "PC 스피커"를 누르면 PC로 소리가 나갑니다.':'';if(pcCode)$('#pcCode').value=pcCode};
+const setCode=c=>{c=String(c||'').trim();if(!/^[A-Za-z0-9_-]{6,64}$/.test(c)){toast('연결 코드가 올바르지 않아요');return false}pcCode=c;save('pcCode',c);pcClose();codeUi();return true};
+$('#pcForm').onsubmit=e=>{e.preventDefault();if(setCode($('#pcCode').value)){toast('저장했어요');setOut('pc')}};
+// 연결 링크(…/#pc=코드)로 열면 코드를 저장하고 주소창에서 지움
+{const m=location.hash.match(/^#pc=([A-Za-z0-9_-]{6,64})$/);if(m&&setCode(m[1])){history.replaceState(null,'',location.pathname);out='pc';save('out','pc');toast('PC 스피커와 연결했어요')}}
+codeUi();outUi();
+if(out==='pc'&&pcCode){pcListen();setTimeout(()=>pcSend({a:'ping'}),500)}else if(out==='pc'){out='phone';outUi()}
 
 // PWA: 설치 버튼 + 서비스워커
 let deferred=null;const ib=$('#install');
