@@ -70,27 +70,30 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .playing .meter i{opacity:.95;animation:lv 1s ease-in-out infinite alternate}
 @keyframes lv{0%{height:12%}100%{height:100%}}
 @media(prefers-reduced-motion:reduce){.playing .meter i{animation:none;height:60%}.needle,.dial{transition:none}}
-.panel{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid rgba(240,228,200,.16);padding-top:16px}
-.transport{display:flex;align-items:center;gap:14px}
-.rb{width:50px;height:50px;border-radius:50%;border:0;display:grid;place-items:center;color:var(--wal2);
+.panel{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(240,228,200,.16);padding-top:12px}
+.transport{display:flex;align-items:center;gap:12px}
+.rb{width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;color:var(--wal2);
  background:radial-gradient(circle at 35% 30%,#fbf3df,#e2d2ad 70%,#c9b48a);box-shadow:0 2px 0 rgba(0,0,0,.35),inset 0 -2px 3px rgba(0,0,0,.15)}
 .rb svg{width:22px;height:22px;fill:currentColor}
-.rb.big{width:68px;height:68px;color:var(--wal2);background:radial-gradient(circle at 35% 30%,var(--brass-l),var(--brass) 55%,var(--brass-d))}
-.rb.big svg{width:30px;height:30px}
+.rb.big{width:60px;height:60px;color:var(--wal2);background:radial-gradient(circle at 35% 30%,var(--brass-l),var(--brass) 55%,var(--brass-d))}
+.rb.big svg{width:26px;height:26px}
 .rb:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
 /* 볼륨 노브 */
-.vol{display:grid;justify-items:center;gap:4px}
-.kwrap{position:relative;width:86px;height:86px;display:grid;place-items:center}
+.vol{display:flex;align-items:center;gap:6px}
+.kwrap{position:relative;width:74px;height:74px;display:grid;place-items:center}
 .kwrap svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.knob{--a:0deg;width:62px;height:62px;border-radius:50%;touch-action:none;cursor:grab;position:relative;
+.knob{--a:0deg;width:56px;height:56px;border-radius:50%;touch-action:none;cursor:grab;position:relative;
  background:repeating-conic-gradient(from 0deg,rgba(0,0,0,.18) 0 4deg,rgba(255,255,255,.08) 4deg 8deg),radial-gradient(circle at 35% 30%,var(--brass-l),var(--brass) 55%,var(--brass-d));
  box-shadow:0 3px 0 rgba(0,0,0,.4),inset 0 -3px 5px rgba(0,0,0,.25);transform:rotate(var(--a))}
-.knob::after{content:"";position:absolute;left:50%;top:5px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--wal2)}
+.knob::after{content:"";position:absolute;left:50%;top:3px;width:4px;height:9px;margin-left:-2px;border-radius:2px;background:var(--wal2)}
 .knob:active{cursor:grabbing}
-.vrow{display:flex;align-items:center;gap:2px}
-.vstep{width:34px;height:34px;border:0;border-radius:50%;background:rgba(240,228,200,.12);color:var(--ivory);font-size:20px;line-height:1}
-.vnum{min-width:44px;height:34px;border:0;background:none;color:var(--ivory);font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;border-radius:8px}
-.vnum.muted{color:var(--brass-l)}
+.vstep{width:34px;height:34px;border:1px solid rgba(240,228,200,.28);border-radius:50%;background:none;color:var(--ivory);display:grid;place-items:center}
+.vstep svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.vstep:active{background:rgba(240,228,200,.15)}
+.kcap{position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;pointer-events:none;display:grid;place-items:center;
+ background:radial-gradient(circle at 40% 35%,#4a3324,#2c1e14);box-shadow:0 1px 0 rgba(255,255,255,.15),inset 0 1px 3px rgba(0,0,0,.6);
+ color:var(--ivory);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kcap.muted{color:var(--brass-l);font-size:10px}
 /* 도구줄 */
 .tools{max-width:880px;margin:12px auto 0;display:flex;gap:10px;align-items:stretch}
 .segs{flex:1;display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--wal);border-radius:12px;overflow:hidden}
@@ -154,8 +157,8 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 footer{color:var(--mute);font-size:13px}
 @media(max-width:600px){
  .dial{height:52px}.now{margin-top:14px}.meter{height:18px;margin:10px 0 12px}
- .panel{gap:8px;padding-top:12px}.transport{gap:10px}.rb{width:46px;height:46px}.rb.big{width:62px;height:62px}
- .kwrap{width:78px;height:78px}.knob{width:56px;height:56px}.vstep{width:32px;height:32px}.vnum{min-width:38px}
+ .panel{gap:6px;padding-top:10px}.transport{gap:8px}.rb{width:42px;height:42px}.rb.big{width:54px;height:54px}.rb svg{width:19px;height:19px}
+ .kwrap{width:66px;height:66px}.knob{width:50px;height:50px}.vstep{width:30px;height:30px}.vol{gap:3px}
  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 34px 8px 11px;min-height:56px}.st b{font-size:17px}.st span{font-size:12px}
  .tab{font-size:16px}.top h1{font-size:18px}.slp{padding:0 12px}
  .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}}
@@ -182,9 +185,11 @@ footer{color:var(--mute);font-size:13px}
     <button class="rb" id="next" aria-label="다음 채널" title="다음 채널 (→)"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
    </div>
    <div class="vol">
+    <button class="vstep" id="volDown" aria-label="소리 줄이기"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
     <div class="kwrap"><svg id="kticks" viewBox="0 0 86 86" aria-hidden="true"></svg>
-     <div class="knob" id="knob" role="slider" tabindex="0" aria-label="볼륨 (돌리기)" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" title="볼륨: 돌리거나 휠, ↑↓"></div></div>
-    <div class="vrow"><button class="vstep" id="volDown" aria-label="소리 줄이기">−</button><button class="vnum" id="mute" aria-label="음소거 켜고 끄기" title="음소거 (M)"><output id="volOut">70</output></button><button class="vstep" id="volUp" aria-label="소리 키우기">+</button></div>
+     <div class="knob" id="knob" role="slider" tabindex="0" aria-label="볼륨: 돌리기, 누르면 음소거" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" title="돌리면 볼륨, 누르면 음소거"></div>
+     <output class="kcap" id="volOut" aria-hidden="true">70</output></div>
+    <button class="vstep" id="volUp" aria-label="소리 키우기"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
     <input type="range" id="vol" min="0" max="100" value="70" hidden>
    </div>
   </div>
@@ -381,23 +386,23 @@ const volEl=$('#vol');let muted=false;
 let volT;
 // 황동 노브: 돌리기(드래그), 마우스 휠, −/+ 버튼, ↑↓ 키. 가운데 숫자를 누르면 음소거.
 const knob=$('#knob');
-const volIco=()=>{const v=+volEl.value;$('#volOut').textContent=muted?'무음':v;$('#mute').classList.toggle('muted',muted);
+const volIco=()=>{const v=+volEl.value;$('#volOut').textContent=muted?'무음':v;$('#volOut').classList.toggle('muted',muted);
  knob.style.setProperty('--a',`${-135+270*v/100}deg`);knob.setAttribute('aria-valuenow',v);knob.setAttribute('aria-valuetext',muted?'무음':`${v}%`)};
 const setVol=v=>{v=Math.round(Math.max(0,Math.min(100,v)));volEl.value=v;au.volume=(v/100)**2;save('vol',v);if(v>0&&muted){muted=false;au.muted=false}volIco();
  if(out==='pc'&&pcCode){clearTimeout(volT);volT=setTimeout(()=>pcSend({a:'vol',v}),400)}};
-$('#kticks').innerHTML=Array.from({length:11},(_,i)=>{const a=(-225+27*i)*Math.PI/180,r1=38,r2=i%5?34:31;
+$('#kticks').innerHTML=Array.from({length:11},(_,i)=>{const a=(-225+27*i)*Math.PI/180,r1=42,r2=i%5?38:36;
  return `<line x1="${43+r1*Math.cos(a)}" y1="${43+r1*Math.sin(a)}" x2="${43+r2*Math.cos(a)}" y2="${43+r2*Math.sin(a)}" stroke="#d9c9a6" stroke-width="${i%5?1.5:2.5}" stroke-linecap="round"/>`}).join('');
 let drag=null;
 const kAng=e=>{const r=knob.getBoundingClientRect();return Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI};
-knob.addEventListener('pointerdown',e=>{e.preventDefault();knob.setPointerCapture(e.pointerId);drag={a:kAng(e),v:+volEl.value};knob.focus()});
-knob.addEventListener('pointermove',e=>{if(!drag)return;const a=kAng(e);let d=a-drag.a;if(d>180)d-=360;if(d<-180)d+=360;drag.a=a;
+knob.addEventListener('pointerdown',e=>{e.preventDefault();knob.setPointerCapture(e.pointerId);drag={a:kAng(e),v:+volEl.value,moved:0,x:e.clientX,y:e.clientY};knob.focus()});
+knob.addEventListener('pointermove',e=>{if(!drag)return;const a=kAng(e);let d=a-drag.a;if(d>180)d-=360;if(d<-180)d+=360;drag.a=a;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6)drag.moved=1;if(!drag.moved)return;
  drag.v=Math.max(0,Math.min(100,drag.v+Math.max(-40,Math.min(40,d))*100/270));setVol(drag.v)});
-['pointerup','pointercancel'].forEach(n=>knob.addEventListener(n,()=>{drag=null}));
+knob.addEventListener('pointerup',()=>{if(drag&&!drag.moved)toggleMute();drag=null});knob.addEventListener('pointercancel',()=>{drag=null});
 knob.addEventListener('wheel',e=>{e.preventDefault();setVol(+volEl.value+(e.deltaY<0?5:-5))},{passive:false});
 knob.addEventListener('keydown',e=>{const s={ArrowUp:5,ArrowRight:5,ArrowDown:-5,ArrowLeft:-5,PageUp:10,PageDown:-10}[e.key];
  if(s){e.preventDefault();e.stopPropagation();setVol(+volEl.value+s)}else if(e.key==='Home'){e.preventDefault();setVol(0)}else if(e.key==='End'){e.preventDefault();setVol(100)}});
 $('#volDown').onclick=()=>setVol(+volEl.value-5);$('#volUp').onclick=()=>setVol(+volEl.value+5);
-$('#mute').onclick=()=>{muted=!muted;au.muted=muted;volIco();if(out==='pc'&&pcCode)pcSend({a:'vol',v:muted?0:+volEl.value})};
+const toggleMute=()=>{muted=!muted;au.muted=muted;volIco();if(out==='pc'&&pcCode)pcSend({a:'vol',v:muted?0:+volEl.value})};
 setVol(load('vol',70));
 
 // 단축키
@@ -408,7 +413,7 @@ document.addEventListener('keydown',e=>{
  if(k===' '){e.preventDefault();$('#play').click()}
  else if(k==='ArrowRight')step(1);else if(k==='ArrowLeft')step(-1);
  else if(k==='ArrowUp'){e.preventDefault();setVol(+volEl.value+5)}else if(k==='ArrowDown'){e.preventDefault();setVol(+volEl.value-5)}
- else if(k==='m'||k==='M'||k==='ㅡ')$('#mute').click();
+ else if(k==='m'||k==='M'||k==='ㅡ')toggleMute();
  else if(k==='f'||k==='F'||k==='ㄹ')$('#favNow').click();
  else if(/^[1-9]$/.test(k)){const s=byId(favs[+k-1]);if(s)play(s)}
 });
