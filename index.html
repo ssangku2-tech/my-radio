@@ -61,7 +61,11 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .star{flex:none;width:46px;height:46px;border-radius:50%;border:1px solid rgba(240,228,200,.35);background:none;color:#d9c9a6;display:grid;place-items:center}
 .star svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8}
 .star.on{color:var(--brass-l);border-color:var(--brass)}.star.on svg{fill:currentColor}
-.meter{display:flex;gap:4px;align-items:flex-end;height:26px;margin:14px 0 16px}
+.mrow{display:flex;align-items:flex-end;gap:14px;margin:14px 0 16px}
+.meter{flex:1;display:flex;gap:4px;align-items:flex-end;height:26px}
+.lamp{flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#d9c9a6;white-space:nowrap}
+.lamp::before{content:"";width:9px;height:9px;border-radius:50%;background:#5a4433;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+.playing .lamp{color:var(--brass-l);font-weight:700}.playing .lamp::before{background:#ffb347;box-shadow:0 0 8px 2px rgba(255,170,60,.7)}
 .meter i{flex:1;max-width:9px;background:var(--brass);border-radius:2px;height:12%;opacity:.35}
 .playing .meter i{opacity:.95;animation:lv 1s ease-in-out infinite alternate}
 @keyframes lv{0%{height:12%}100%{height:100%}}
@@ -101,15 +105,15 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .slp:focus-within{outline:3px solid #2f7cf6;outline-offset:2px}
 .status{max-width:880px;margin:8px auto 0;font-size:13px;color:var(--mute);display:flex;gap:4px 12px;flex-wrap:wrap}.status:not(:has(span:not(:empty))){display:none}
 /* 탭: 한 줄, 크게 */
-.tabs{display:flex;gap:22px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid var(--line);margin-bottom:12px}
 .tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
-.tab{flex:none;background:none;border:0;border-bottom:3px solid transparent;padding:8px 0 10px;font-size:19px;font-weight:700;color:var(--mute);white-space:nowrap;margin-bottom:-1px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 0 11px;font-size:18px;font-weight:700;color:var(--mute);white-space:nowrap;margin-bottom:-1px;text-align:center}
 .tab sup{font-size:11px;margin-left:2px;color:var(--brass-d)}
 .tab[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--brass)}
 /* 장르: 한 줄 */
 .chiprow{display:flex;gap:8px;align-items:center;margin-bottom:14px}
-.chips{flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:0 13px;min-height:40px;font-size:15px;white-space:nowrap}
+.chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:0 4px;min-height:40px;font-size:15px;white-space:nowrap}
 .chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .qbtn{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center}
 .qbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
@@ -118,10 +122,11 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .search{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:44px;background:var(--card);font-size:16px}
 /* 채널 카드 */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.st{position:relative;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px 44px 12px 14px;min-height:78px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.st{position:relative;text-align:left;background:linear-gradient(var(--card),light-dark(#f1e8d8,#1b1510));border:1px solid var(--line);border-radius:14px;padding:12px 44px 12px 14px;min-height:74px;display:flex;flex-direction:column;justify-content:center;gap:2px;cursor:pointer;box-shadow:0 3px 0 light-dark(#d6c6aa,#0c0907),0 4px 8px -4px rgba(60,40,20,.25);transition:transform .08s,box-shadow .08s;user-select:none;-webkit-user-select:none}
+.st:active{transform:translateY(2px);box-shadow:0 1px 0 light-dark(#d6c6aa,#0c0907)}
 .st:hover{border-color:var(--brass)}
-.st.cur{border-color:var(--wal);background:var(--cur)}
-:root:not([data-theme=light]) .st.cur{border-color:light-dark(var(--wal),var(--brass))}
+.st.cur{border-color:var(--wal2);background:linear-gradient(#4a3324,#3a281b);color:var(--ivory);transform:translateY(2px);box-shadow:0 1px 0 #1d140d,inset 0 2px 4px rgba(0,0,0,.35)}
+.st.cur span{color:#d9c9a6}.st.cur .fav{color:#d9c9a6}.st.cur .fav.on{color:var(--brass-l)}
 .st b{font-size:16px;line-height:1.3}
 .st span{font-size:13px;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .st .num{position:absolute;left:-6px;top:-6px;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--brass);color:var(--wal2);display:grid;place-items:center}
@@ -153,9 +158,9 @@ footer{color:var(--mute);font-size:13px}
  .panel{gap:8px;padding-top:12px}.transport{gap:10px}.rb{width:46px;height:46px}.rb.big{width:62px;height:62px}
  .kwrap{width:78px;height:78px}.knob{width:56px;height:56px}.vstep{width:32px;height:32px}.vnum{min-width:38px}
  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:10px 38px 10px 12px;min-height:70px}.st b{font-size:15px}
- .tabs{gap:18px}.tab{font-size:18px}.top h1{font-size:18px}.slp{padding:0 12px}
- .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{padding:0 12px;font-size:14px}}
-@media(max-width:360px){.tab{font-size:17px}.tabs{gap:14px}.slp span{display:none}}
+ .tab{font-size:16px}.top h1{font-size:18px}.slp{padding:0 12px}
+ .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}}
+@media(max-width:360px){.tab{font-size:15px}.slp span{display:none}}
 </style>
 </head>
 <body>
@@ -165,13 +170,12 @@ footer{color:var(--mute);font-size:13px}
   <div class="dial" aria-hidden="true"><svg id="scale"></svg><div class="needle" id="needle" style="left:10%"></div></div>
   <div class="now">
    <div class="now-l">
-    <div class="now-tag"><span class="pill" id="state">대기 중</span><span id="where"></span></div>
     <div class="now-name" id="nowName">채널을 고르세요</div>
     <div class="now-desc" id="nowDesc">아래 채널을 누르면 바로 재생됩니다.</div>
    </div>
    <button class="star" id="favNow" aria-label="즐겨찾기" title="즐겨찾기 (F)"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.8 6.3.6-4.8 4.2 1.4 6.2L12 16.6l-5.5 3.2 1.4-6.2-4.8-4.2 6.3-.6z" stroke-linejoin="round"/></svg></button>
   </div>
-  <div class="meter" aria-hidden="true" id="meter"></div>
+  <div class="mrow"><div class="meter" aria-hidden="true" id="meter"></div><span class="lamp" id="state" role="status">대기 중</span></div>
   <div class="panel">
    <div class="transport">
     <button class="rb" id="prev" aria-label="이전 채널" title="이전 채널 (←)"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
@@ -194,56 +198,25 @@ footer{color:var(--mute);font-size:13px}
   <label class="slp" id="slp"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" stroke-linejoin="round"/></svg><span id="sleepLbl">취침</span>
    <select id="sleep" aria-label="취침 타이머"><option value="0">취침 타이머 끄기</option><option value="15">15분 뒤 끄기</option><option value="30">30분 뒤 끄기</option><option value="60">1시간 뒤 끄기</option><option value="90">1시간 30분 뒤 끄기</option><option value="120">2시간 뒤 끄기</option></select></label>
  </div>
- <div class="status"><span id="pcInfo"></span><span id="stats"></span></div>
 </section>
 
 <section class="band" style="padding-top:12px">
  <div class="wrap">
   <div class="tabs" id="tabs" role="tablist" aria-label="채널 묶음"></div>
-  <div class="chiprow"><div class="chips" id="chips" aria-label="장르"></div>
-   <button class="qbtn" id="qBtn" aria-label="채널 이름 찾기" aria-pressed="false" title="찾기 ( / )"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg></button></div>
-  <div class="qrow" id="qRow" hidden><input class="search" id="q" type="search" placeholder="채널 이름 찾기" aria-label="채널 찾기"></div>
+  <div class="chips" id="chips" aria-label="장르"></div>
   <div class="grid" id="grid"></div>
  </div>
 </section>
 
-<section class="band" style="padding-top:0">
- <div class="wrap cols">
-  <div class="box">
-   <h2>전 세계 방송 찾기</h2>
-   <p class="lead">3만 개가 넘는 인터넷 라디오(radio-browser.info)에서 이름·장르로 찾습니다. 예: jazz, lofi, BBC, 클래식</p>
-   <form class="field" id="wForm"><input id="wq" placeholder="검색어" aria-label="세계 방송 검색어"><button class="btn">검색</button></form>
-   <ul class="res" id="wRes"></ul>
-  </div>
-  <div class="box">
-   <h2>내 채널 추가</h2>
-   <p class="lead">스트림 주소(.mp3, .aac, .m3u8)를 알면 직접 넣을 수 있어요. 추가한 채널은 '내 채널' 탭에 남습니다.</p>
-   <form class="field" id="cForm"><input id="cName" placeholder="이름" aria-label="채널 이름" required><input id="cUrl" placeholder="https://…" aria-label="스트림 주소" required><button class="btn">추가</button></form>
-   <h2 style="margin-top:22px">라디오 알람</h2>
-   <p class="lead">정한 시각에 지금 채널(없으면 마지막 채널)을 작게 틀고 천천히 키웁니다. 이 창이 열려 있어야 울려요.</p>
-   <div class="field"><input type="time" id="alarmT" aria-label="알람 시각"><button class="btn" id="alarmBtn">알람 켜기</button></div>
-   <div class="small" id="alarmInfo" style="opacity:1;color:var(--mute)"></div>
-   <h2 style="margin-top:22px">PC 스피커 연결</h2>
-   <p class="lead">집 PC의 HDMI 스피커로 소리를 보냅니다. 노트4 서버가 받아서 PC의 'PC 스피커' 창에서 틀어 줘요. 밖에서 데이터로도 됩니다. 처음 한 번만 연결 코드를 넣으세요.</p>
-   <form class="field" id="pcForm"><input id="pcCode" placeholder="연결 코드" aria-label="PC 스피커 연결 코드" autocomplete="off"><button class="btn">저장</button></form>
-   <div class="small" id="pcCodeInfo" style="opacity:1;color:var(--mute)"></div>
-  </div>
-  <div class="box">
-   <h2>단축키</h2>
-   <div class="keys">
-    <kbd>Space</kbd><span>재생 / 정지</span>
-    <kbd>← →</kbd><span>이전 / 다음 채널</span>
-    <kbd>↑ ↓</kbd><span>볼륨 5씩</span>
-    <kbd>M</kbd><span>음소거</span>
-    <kbd>F</kbd><span>즐겨찾기</span>
-    <kbd>1 – 9</kbd><span>즐겨찾기 순서대로 바로 듣기</span>
-    <kbd>/</kbd><span>채널 찾기</span>
-   </div>
-   <p class="lead" style="margin-top:14px">키보드의 미디어 키(재생·다음)와 윈도우 볼륨 팝업에서도 조작됩니다. 끊기면 자동으로 다시 연결합니다.</p>
-  </div>
+<section class="band" style="padding-top:8px">
+ <div class="wrap box">
+  <h2>전 세계 방송 찾기</h2>
+  <p class="lead">3만 개가 넘는 인터넷 라디오에서 이름·장르로 찾아요. ＋를 누르면 즐겨찾기에 들어갑니다. 예: jazz, lofi, BBC</p>
+  <form class="field" id="wForm"><input id="wq" placeholder="검색어" aria-label="세계 방송 검색어"><button class="btn">검색</button></form>
+  <ul class="res" id="wRes"></ul>
  </div>
 </section>
-<footer class="band wrap" id="foot">방송 주소는 각 방송사가 바꾸면 안 나올 수 있습니다. 그럴 땐 "전 세계 방송 찾기"에서 같은 이름을 찾아 즐겨찾기 해 두세요. MBC 방송 주소는 Cloudflare 워커(cloudflare/worker.js)가 받아 옵니다.</footer>
+<footer class="band wrap" id="foot">방송사가 주소를 바꾸면 일부 채널이 안 나올 수 있어요. 그럴 땐 위에서 같은 이름을 찾아 ＋ 해 두세요.</footer>
 <div class="toast" id="toast" role="status"></div>
 <audio id="au" preload="none"></audio>
 
@@ -328,12 +301,12 @@ const roScale=new ResizeObserver(()=>{drawScale();if(cur)setNeedle(cur)});roScal
 $('#meter').innerHTML=Array.from({length:22},(_,i)=>`<i style="animation-delay:${(i*137%600)/1000}s;animation-duration:${0.5+(i*53%50)/100}s"></i>`).join('');
 
 // 목록
-const TABS=[['all','전체'],['fav','즐겨찾기'],['kr','한국'],['en','해외'],['recent','최근'],['mine','내 채널']];
+const TABS=[['all','전체'],['fav','즐겨찾기'],['kr','한국'],['en','해외'],['recent','최근']];
+if(!TABS.some(t=>t[0]===tab))tab='all';
 const CATS=[['all','전체'],['news','뉴스'],['music','음악'],['classic','클래식'],['talk','교양']];
 const listNow=()=>{let l;
  if(tab==='fav')l=favs.map(byId).filter(Boolean);
  else if(tab==='recent')l=recent.map(byId).filter(Boolean);
- else if(tab==='mine')l=mine;
  else l=all().filter(s=>tab==='all'||s.g===tab);
  if(cat!=='all')l=l.filter(s=>s.c===cat);
  if(q)l=l.filter(s=>(s.n+' '+(s.d||'')).toLowerCase().includes(q));
@@ -343,22 +316,16 @@ const render=()=>{
  $('#chips').innerHTML=CATS.map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${cat===k}">${v}</button>`).join('');
  const l=listNow();
  $('#grid').innerHTML=l.length?l.map(s=>{const fi=favs.indexOf(s.id);return `<div class="st${cur&&cur.id===s.id?' cur':''}" role="button" tabindex="0" data-id="${esc(s.id)}">${fi>-1&&fi<9?`<span class="num">${fi+1}</span>`:''}<b>${esc(s.n)}</b><span>${esc(s.d||'')}</span><button class="fav${fi>-1?' on':''}" data-fav="${esc(s.id)}" aria-label="즐겨찾기">${fi>-1?'★':'☆'}</button></div>`}).join('')
- :`<div class="empty">${tab==='fav'?'채널 카드의 ☆을 누르면 여기에 모입니다.':tab==='mine'?'아래 "내 채널 추가"나 "전 세계 방송 찾기"에서 추가해 보세요.':'맞는 채널이 없어요.'}</div>`;
+ :`<div class="empty">${tab==='fav'?'채널 카드의 ☆을 누르면 여기에 모입니다.':'맞는 채널이 없어요.'}</div>`;
  $('#favNow').classList.toggle('on',!!cur&&favs.includes(cur.id));
 };
 document.addEventListener('click',e=>{
- const t=e.target.closest('[data-tab]');if(t){tab=t.dataset.tab;save('tab',tab);render();showSel();return}
- const c=e.target.closest('[data-cat]');if(c){cat=c.dataset.cat;render();showSel();return}
+ const t=e.target.closest('[data-tab]');if(t){tab=t.dataset.tab;save('tab',tab);render();return}
+ const c=e.target.closest('[data-cat]');if(c){cat=c.dataset.cat;render();return}
  const f=e.target.closest('[data-fav]');if(f){toggleFav(f.dataset.fav);return}
  const s=e.target.closest('.st');if(s){const st=byId(s.dataset.id);if(cur&&cur.id===st.id&&playing)stop();else play(st)}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('st'))e.target.click()});
-$('#q').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();render()});
-const openSearch=o=>{$('#qRow').hidden=!o;$('#qBtn').setAttribute('aria-pressed',o);if(o)$('#q').focus();else if(q){$('#q').value='';q='';render()}};
-$('#qBtn').onclick=()=>openSearch($('#qRow').hidden);
-$('#q').addEventListener('keydown',e=>{if(e.key==='Escape')openSearch(false)});
-// 고른 탭·장르가 한 줄 밖에 있으면 보이게 밀어 줌
-const showSel=()=>document.querySelectorAll('.tab[aria-pressed=true],.chip[aria-pressed=true]').forEach(b=>{const p=b.parentElement;if(b.offsetLeft<p.scrollLeft||b.offsetLeft+b.offsetWidth>p.scrollLeft+p.clientWidth)p.scrollTo({left:b.offsetLeft-16,behavior:'smooth'})});
 const toggleFav=id=>{const i=favs.indexOf(id);if(i>-1)favs.splice(i,1);else favs.push(id);save('favs',favs);render();toast(i>-1?'즐겨찾기에서 뺐어요':'즐겨찾기에 넣었어요')};
 
 // 주소 풀기
@@ -373,7 +340,7 @@ const killHls=()=>{if(hls){hls.destroy();hls=null}};
 const play=async(s,isRetry)=>{
  if(!s)return;cur=s;want=true;if(!isRetry){retry=0;s._native=0}
  setNeedle(s);
- $('#nowName').textContent=s.n;$('#nowDesc').textContent=s.d||'';$('#where').textContent=s.g==='kr'?'한국':s.g==='en'?'해외':'내 채널';
+ $('#nowName').textContent=s.n;$('#nowDesc').textContent=s.d||'';
  setState('연결 중…');save('last',s.id);
  recent=[s.id].concat(recent.filter(x=>x!==s.id)).slice(0,12);save('recent',recent);render();
  mediaMeta();
@@ -407,7 +374,13 @@ au.addEventListener('pause',()=>{if(!want&&out!=='pc')setPlaying(false)});
 let stallT;au.addEventListener('stalled',()=>{clearTimeout(stallT);stallT=setTimeout(()=>{if(want&&au.paused===false&&au.readyState<3)fail()},12000)});
 
 $('#play').onclick=()=>{if(playing||want)stop();else play(cur||byId(load('last','kbs1fm'))||ST[0])};
-const step=d=>{const l=listNow().length?listNow():all();let i=cur?l.findIndex(s=>s.id===cur.id):-1;i=(i+d+l.length)%l.length;play(l[i])};
+// ⏮⏭ = 라디오 탐색: 지금 주파수에서 위(다음)·아래(이전)로 다음 방송을 찾아감. 끝에 닿으면 반대쪽 끝으로.
+// 주파수가 없는 디지털 채널은 FM 108 뒤에 목록 순서대로 이어 붙임. 지금 보고 있는 탭·장르 안에서만 찾음.
+const freqOf=s=>{const m=/(\d{2,3}\.\d)\s*MHz/.exec(s.d||'');return m?+m[1]:200+all().indexOf(s)/100};
+const step=d=>{const l=(listNow().length?listNow():all()).slice().sort((a,b)=>freqOf(a)-freqOf(b));if(!l.length)return;
+ let n;if(!cur)n=d>0?l[0]:l[l.length-1];
+ else{const f=freqOf(cur);n=d>0?l.find(s=>freqOf(s)>f):[...l].reverse().find(s=>freqOf(s)<f);if(!n)n=d>0?l[0]:l[l.length-1]}
+ if(cur&&n.id===cur.id&&l.length===1)return;play(n)};
 $('#prev').onclick=()=>step(-1);$('#next').onclick=()=>step(1);
 $('#favNow').onclick=()=>cur&&toggleFav(cur.id);
 
@@ -445,7 +418,6 @@ document.addEventListener('keydown',e=>{
  else if(k==='ArrowUp'){e.preventDefault();setVol(+volEl.value+5)}else if(k==='ArrowDown'){e.preventDefault();setVol(+volEl.value-5)}
  else if(k==='m'||k==='M'||k==='ㅡ')$('#mute').click();
  else if(k==='f'||k==='F'||k==='ㄹ')$('#favNow').click();
- else if(k==='/'){e.preventDefault();openSearch(true)}
  else if(/^[1-9]$/.test(k)){const s=byId(favs[+k-1]);if(s)play(s)}
 });
 
@@ -462,11 +434,6 @@ $('#sleep').onchange=e=>{const m=+e.target.value;sleepAt=m?Date.now()+m*60000:0;
 const sleepUi=left=>{$('#slp').classList.toggle('on',left>0);
  $('#sleepLbl').textContent=left>0?`${Math.floor(left/60)}:${String(Math.floor(left%60)).padStart(2,'0')}`:'취침'};
 
-// 알람
-let alarm=load('alarm',null),alarmFired='';
-const alarmUi=()=>{$('#alarmBtn').textContent=alarm?'알람 끄기':'알람 켜기';$('#alarmInfo').textContent=alarm?`매일 ${alarm} 에 켜집니다.`:'';if(alarm)$('#alarmT').value=alarm};
-$('#alarmBtn').onclick=()=>{if(alarm){alarm=null}else{const v=$('#alarmT').value;if(!v){toast('시각을 먼저 고르세요');return}alarm=v;toast(`${v} 알람을 맞췄어요`)}save('alarm',alarm);alarmUi()};
-alarmUi();
 let fade=null;
 const fadeIn=()=>{const target=+volEl.value||50;let v=5;setVol(v);clearInterval(fade);fade=setInterval(()=>{v+=2;if(v>=target){v=target;clearInterval(fade)}setVol(v)},1500)};
 
@@ -482,11 +449,6 @@ const tick=()=>{const d=new Date();
    if(left<30&&playing){if(baseVol==null)baseVol=+volEl.value;au.volume=((baseVol/100)**2)*(left/30)}}}
  else sleepUi(0);
  const hm=d.toTimeString().slice(0,5);
- if(alarm&&hm===alarm&&alarmFired!==today()+hm){alarmFired=today()+hm;play(cur||byId(load('last','kbs1fm'))||ST[0]);fadeIn();toast('좋은 아침이에요!')}
- if(playing&&cur){const k=today();stats[k]=stats[k]||{};stats[k][cur.id]=(stats[k][cur.id]||0)+1;if(d.getSeconds()%15===0)save('stats',stats)}
- const td=stats[today()]||{};const tot=Object.values(td).reduce((a,b)=>a+b,0);
- const top=Object.entries(td).sort((a,b)=>b[1]-a[1])[0];
- $('#stats').textContent=tot>59?`오늘 ${fmt(tot)} 들었어요${top&&byId(top[0])?` · 가장 많이: ${byId(top[0]).n}`:''}`:'';
 };
 setInterval(tick,1000);tick();
 
@@ -504,16 +466,13 @@ $('#wForm').onsubmit=async e=>{e.preventDefault();const w=$('#wq').value.trim();
   return}catch(err){}}
  ul.innerHTML='<li>검색 서버에 연결하지 못했어요.</li>'};
 const fromW=s=>({id:'rb_'+s.stationuuid,n:s.name.trim().slice(0,60),g:'mine',c:/news|talk/i.test(s.tags)?'news':/classic/i.test(s.tags)?'classic':'music',d:[s.country,(s.tags||'').split(',')[0]].filter(Boolean).join(' · '),u:s.url_resolved});
-const addMine=s=>{if(!mine.find(m=>m.id===s.id)){mine.push(s);save('mine',mine)}if(!favs.includes(s.id)){favs.push(s.id);save('favs',favs)}render();toast(`"${s.n}" 을(를) 내 채널·즐겨찾기에 넣었어요`)};
+const addMine=s=>{if(!mine.find(m=>m.id===s.id)){mine.push(s);save('mine',mine)}if(!favs.includes(s.id)){favs.push(s.id);save('favs',favs)}render();toast(`"${s.n}" 을(를) 즐겨찾기에 넣었어요`)};
 $('#wRes').addEventListener('click',e=>{const p=e.target.closest('[data-wp]'),a=e.target.closest('[data-wa]');
  if(p){const s=fromW(wList[+p.dataset.wp]);if(!byId(s.id))mine.push(s),save('mine',mine);play(byId(s.id))}
  if(a)addMine(fromW(wList[+a.dataset.wa]))});
-$('#cForm').onsubmit=e=>{e.preventDefault();const n=$('#cName').value.trim(),u=$('#cUrl').value.trim();
- if(!/^https?:\/\//.test(u)){toast('주소는 http:// 또는 https:// 로 시작해야 해요');return}
- addMine({id:'my_'+Date.now(),n,g:'mine',c:'music',d:'직접 추가',u});e.target.reset();tab='mine';render()};
 // 내 채널 지우기: 내 채널 탭에서 카드 우클릭
 $('#grid').addEventListener('contextmenu',e=>{const s=e.target.closest('.st');if(!s||!/^(my_|rb_)/.test(s.dataset.id))return;e.preventDefault();
- mine=mine.filter(m=>m.id!==s.dataset.id);favs=favs.filter(f=>f!==s.dataset.id);save('mine',mine);save('favs',favs);render();toast('내 채널에서 지웠어요')});
+ mine=mine.filter(m=>m.id!==s.dataset.id);favs=favs.filter(f=>f!==s.dataset.id);save('mine',mine);save('favs',favs);render();toast('지웠어요')});
 
 const last=byId(load('last',''));if(last){cur=last;setNeedle(last);$('#nowName').textContent=last.n;$('#nowDesc').textContent='▶ 를 누르면 이어서 듣습니다.'}
 if(location.hash==='#fav'){tab='fav'}
@@ -523,9 +482,9 @@ if(location.hash==='#resume'&&last){play(last)}
 // PC 스피커 (노트4 서버 경유)
 let es=null,pcWait=null;
 const castOf=s=>s.kbs?{kind:'kbs',v:String(s.kbs)}:s.sbs?{kind:'sbs',v:s.sbs}:s.mbc?{kind:'mbc',v:s.mbc}:{kind:'url',v:s.u};
-const pcInfo=t=>{$('#pcInfo').textContent=t};
+const pcInfo=()=>{};
 const pcTimeout=(ms,msg)=>{clearTimeout(pcWait);pcWait=setTimeout(()=>{if(out!=='pc')return;want=false;setPlaying(false);setState('응답 없음');pcInfo('노트4 서버 응답 없음');toast(msg)},ms)};
-const pcCast=s=>{if(!pcCode){setOut('phone');toast('PC 스피커 연결 코드를 먼저 넣어 주세요');return}
+const pcCast=s=>{if(!pcCode){setOut('phone');toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  setState('PC로 보내는 중…');pcInfo('');pcListen();
  pcSend(Object.assign({a:'cast',name:s.n,vol:muted?0:+volEl.value,id:Date.now()},castOf(s)));
  pcTimeout(20000,'노트4 서버가 응답하지 않아요. 노트4와 PC의 PC 스피커 창이 켜져 있는지 확인해 주세요.')};
@@ -540,18 +499,16 @@ const pcListen=()=>{if(es||!pcCode||!window.EventSource)return;
 const pcClose=()=>{if(es){es.close();es=null}clearTimeout(pcWait)};
 const outUi=()=>{$('#outPhone').setAttribute('aria-pressed',out==='phone');$('#outPc').setAttribute('aria-pressed',out==='pc');if(out!=='pc')pcInfo('')};
 const setOut=o=>{if(o===out)return;
- if(o==='pc'&&!pcCode){toast('아래 "PC 스피커 연결"에 코드를 먼저 넣어 주세요');$('#pcCode').scrollIntoView({block:'center'});$('#pcCode').focus();return}
+ if(o==='pc'&&!pcCode){toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  const was=(playing||want)&&cur;if(was)stop();
  out=o;save('out',o);outUi();
  if(o==='pc'){pcListen();setTimeout(()=>pcSend({a:'ping'}),300);pcTimeout(15000,'노트4 서버가 응답하지 않아요.')}else pcClose();
  if(was)setTimeout(()=>play(cur),o==='pc'?600:200)};
 $('#outPhone').onclick=()=>setOut('phone');$('#outPc').onclick=()=>setOut('pc');
-const codeUi=()=>{$('#pcCodeInfo').textContent=pcCode?'연결 코드가 저장돼 있어요. 위의 "PC 스피커"를 누르면 PC로 소리가 나갑니다.':'';if(pcCode)$('#pcCode').value=pcCode};
-const setCode=c=>{c=String(c||'').trim();if(!/^[A-Za-z0-9_-]{6,64}$/.test(c)){toast('연결 코드가 올바르지 않아요');return false}pcCode=c;save('pcCode',c);pcClose();codeUi();return true};
-$('#pcForm').onsubmit=e=>{e.preventDefault();if(setCode($('#pcCode').value)){toast('저장했어요');setOut('pc')}};
+const setCode=c=>{c=String(c||'').trim();if(!/^[A-Za-z0-9_-]{6,64}$/.test(c)){toast('연결 코드가 올바르지 않아요');return false}pcCode=c;save('pcCode',c);pcClose();return true};
 // 연결 링크(…/#pc=코드)로 열면 코드를 저장하고 주소창에서 지움
 {const m=location.hash.match(/^#pc=([A-Za-z0-9_-]{6,64})$/);if(m&&setCode(m[1])){history.replaceState(null,'',location.pathname);out='pc';save('out','pc');toast('PC 스피커와 연결했어요')}}
-codeUi();outUi();
+outUi();
 if(out==='pc'&&pcCode){pcListen();setTimeout(()=>pcSend({a:'ping'}),500)}else if(out==='pc'){out='phone';outUi()}
 
 // PWA: 설치 버튼 + 서비스워커
