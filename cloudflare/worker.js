@@ -1,9 +1,46 @@
-// 나만의 라디오 - MBC 방송 주소 풀기.
-// MBC는 브라우저가 방송 주소(토큰 붙은 m3u8)를 직접 받아가지 못하게 막아 두어서,
-// 이 워커가 대신 받아서 CORS 헤더를 붙여 돌려준다.  GET /mbc?ch=sfm|mfm|chm
+// 나만의 라디오 워커
+// GET /mbc?ch=sfm|mfm|chm   MBC는 브라우저가 방송 주소(토큰 붙은 m3u8)를 직접 받아가지 못하게 막아 두어서 대신 받아 줌.
+// GET /caption?id=bbcws[&ko=1]  영어 뉴스 방송의 지금 소리를 몇 초 받아 Whisper(Workers AI)로 받아쓴 글을 돌려줌.
+//                              ko=1이면 한국어 번역도 함께. 응답: {"text": "...", "ko": "..."}
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' };
+const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
+
+// 자막을 만들 수 있는 방송 (주소를 앱에서 받지 않고 여기 고정: 아무 주소나 받아쓰는 통로가 되지 않게)
+const CAPTION = {
+  bbcws: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service',
+  npr: 'https://npr-ice.streamguys1.com/live.mp3',
+  cnn: 'https://tunein.cdnstream1.com/2868_96.mp3',
+  lbc: 'https://media-ice.musicradio.com/LBCUKMP3',
+  times: 'https://timesradio.wireless.radio/stream',
+  wnyc: 'https://fm939.wnyc.org/wnycfm',
+};
+
+// 생방송 스트림에서 약 secs초 분량(또는 maxBytes)만 읽고 끊음
+async function grab(url, secs, maxBytes) {
+  const ctrl = new AbortController();
+  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Icy-MetaData': '0' }, signal: ctrl.signal });
+  if (!r.ok || !r.body) throw new Error('stream ' + r.status);
+  const reader = r.body.getReader(), parts = [], end = Date.now() + secs * 1000;
+  let n = 0;
+  while (n < maxBytes && Date.now() < end) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    parts.push(value); n += value.length;
+  }
+  try { ctrl.abort(); } catch (e) {}
+  const buf = new Uint8Array(n); let o = 0;
+  for (const p of parts) { buf.set(p.subarray(0, Math.min(p.length, n - o)), o); o += p.length; if (o >= n) break; }
+  return buf;
+}
+
+function b64(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
 export default {
-  async fetch(req) {
+  async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/mbc') {
       const ch = url.searchParams.get('ch') || '';
@@ -13,6 +50,24 @@ export default {
       const t = (await r.text()).trim().split(/\s+/)[0] || '';
       if (!r.ok || !/^https:\/\/\S+\.m3u8/.test(t)) return new Response('mbc error', { status: 502, headers: CORS });
       return new Response(t, { headers: { ...CORS, 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+    if (url.pathname === '/caption') {
+      const src = CAPTION[url.searchParams.get('id') || ''];
+      if (!src) return json({ error: 'no captions for this station' }, 400);
+      try {
+        const audio = await grab(src, 10, 200000);   // ~10초 (128kbps 기준 160KB)
+        if (audio.length < 8000) return json({ text: '' });
+        const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true });
+        const text = String(out?.text || '').trim();
+        const res = { text };
+        if (url.searchParams.get('ko') === '1' && text) {
+          const tr = await env.AI.run('@cf/meta/m2m100-1.2b', { text, source_lang: 'english', target_lang: 'korean' });
+          res.ko = String(tr?.translated_text || '').trim();
+        }
+        return json(res);
+      } catch (e) {
+        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+      }
     }
     if (url.pathname === '/ping') return new Response('ok', { headers: CORS });
     return new Response('not found', { status: 404, headers: CORS });

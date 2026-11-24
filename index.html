@@ -63,6 +63,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .star.on{color:var(--brass-l);border-color:var(--brass)}.star.on svg{fill:currentColor}
 .mrow{display:flex;align-items:flex-end;gap:14px;margin:14px 0 16px}
 .meter{flex:1;display:flex;gap:4px;align-items:flex-end;height:26px}
+.lamp[hidden]{display:none}
 .lamp{flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#d9c9a6;white-space:nowrap}
 .lamp::before{content:"";width:9px;height:9px;border-radius:50%;background:#5a4433;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
 .playing .lamp{color:var(--brass-l);font-weight:700}.playing .lamp::before{background:#ffb347;box-shadow:0 0 8px 2px rgba(255,170,60,.7)}
@@ -96,11 +97,23 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .kcap.muted{color:var(--brass-l);font-size:10px}
 /* 도구줄 */
 .tools{max-width:880px;margin:12px auto 0;display:flex;gap:10px;align-items:stretch}
-.segs{flex:1;display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--wal);border-radius:12px;overflow:hidden}
+.segs{flex:1;display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--wal);border-radius:12px}.seg:first-child{border-radius:10px 0 0 10px}.seg:last-child{border-radius:0 10px 10px 0}
 :root:not([data-theme=light]) .segs{border-color:light-dark(var(--wal),#6b5440)}
 .seg{border:0;background:none;min-height:44px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px}
 .seg svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
 .seg[aria-pressed=true]{background:var(--wal);color:var(--ivory)}
+.seg{position:relative;white-space:nowrap}.on-badge{display:none;position:absolute;top:-8px;right:8px;z-index:1;font-style:normal;font-size:9px;line-height:14px;font-weight:800;letter-spacing:.04em;padding:1px 6px;border-radius:99px;background:#ffb347;color:#3a1f05;box-shadow:0 0 8px 1px rgba(255,170,60,.75)}
+.seg.live .on-badge{display:inline-block}
+.cap{margin:-4px 0 14px;border-radius:12px;background:rgba(15,9,5,.45);box-shadow:inset 0 2px 6px rgba(0,0,0,.4);padding:10px 12px 12px}
+.cap[hidden],.capon[hidden]{display:none}
+.caph{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.capt{flex:1;font-size:12px;color:var(--brass-l);font-weight:700}.capt small{font-weight:400;color:#bfae8c}
+.capb{border:1px solid rgba(240,228,200,.3);background:none;color:#d9c9a6;border-radius:99px;font-size:12px;padding:3px 10px;min-height:28px}
+.capb[aria-pressed=true]{background:var(--brass);border-color:var(--brass);color:var(--wal2);font-weight:700}
+.capx{max-height:7.6em;overflow-y:auto;font-size:16px;line-height:1.5;color:var(--ivory);scrollbar-width:none}
+.capx::-webkit-scrollbar{display:none}
+.capx p{margin:0 0 6px}.capx p.old{color:#a8977f}.capx .ko{display:block;color:var(--brass-l);font-size:15px}.capw{color:#bfae8c;font-size:14px}
+.capon{margin:-6px 0 12px;border:1px dashed rgba(240,228,200,.35);background:none;color:#d9c9a6;border-radius:99px;font-size:13px;padding:4px 12px;min-height:32px}
 .slp{position:relative;flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;min-height:44px;font-weight:700;color:var(--ink);white-space:nowrap}
 .slp svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
 .slp.on{border-color:var(--brass);background:light-dark(#f3e5c6,#33261a)}
@@ -177,7 +190,12 @@ footer{color:var(--mute);font-size:13px}
    </div>
    <button class="star" id="favNow" aria-label="즐겨찾기" title="즐겨찾기 (F)"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.8 6.3.6-4.8 4.2 1.4 6.2L12 16.6l-5.5 3.2 1.4-6.2-4.8-4.2 6.3-.6z" stroke-linejoin="round"/></svg></button>
   </div>
-  <div class="mrow"><div class="meter" aria-hidden="true" id="meter"></div><span class="lamp" id="state" role="status">대기 중</span></div>
+  <div class="mrow"><div class="meter" aria-hidden="true" id="meter"></div><span class="lamp" id="state" role="status" hidden>대기 중</span></div>
+  <div class="cap" id="cap" hidden>
+   <div class="caph"><span class="capt">실시간 자막 <small>· 영어 받아쓰기, 10초쯤 늦어요</small></span><button class="capb" id="capKo" aria-pressed="false">한글</button><button class="capb" id="capOff">끄기</button></div>
+   <div class="capx" id="capx" aria-live="polite"><p class="capw">자막을 받아오는 중…</p></div>
+  </div>
+  <button class="capon" id="capOn" hidden>자막 켜기</button>
   <div class="panel">
    <div class="transport">
     <button class="rb" id="prev" aria-label="이전 채널" title="이전 채널 (←)"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
@@ -197,7 +215,7 @@ footer{color:var(--mute);font-size:13px}
  <div class="tools">
   <div class="segs" role="group" aria-label="소리 나오는 곳">
    <button class="seg" id="outPhone" aria-pressed="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>이 기기</button>
-   <button class="seg" id="outPc" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>PC 스피커</button>
+   <button class="seg" id="outPc" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>PC 스피커<i class="on-badge" aria-hidden="true">ON</i></button>
   </div>
   <label class="slp" id="slp"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" stroke-linejoin="round"/></svg><span id="sleepLbl">취침</span>
    <select id="sleep" aria-label="취침 타이머"><option value="0">취침 타이머 끄기</option><option value="15">15분 뒤 끄기</option><option value="30">30분 뒤 끄기</option><option value="60">1시간 뒤 끄기</option><option value="90">1시간 30분 뒤 끄기</option><option value="120">2시간 뒤 끄기</option></select></label>
@@ -250,17 +268,17 @@ const ST=[
  {id:'kfn',n:'국방FM',g:'kr',c:'music',d:'국군방송 · 100.0MHz',u:'https://mediaworks.dema.mil.kr/live_edge/audio.sdp/playlist.m3u8'},
  {id:'arirang',n:'Arirang Radio',g:'kr',c:'news',d:'아리랑 영어 라디오',u:'https://amdlive-ch03-ctnd-com.akamaized.net/arirang_3ch/smil:arirang_3ch.smil/playlist.m3u8'},
  // 해외 영어권
- {id:'bbcws',n:'BBC World Service',g:'en',c:'news',d:'영국 · 세계 뉴스',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'},
+ {id:'bbcws',cap:'bbcws',n:'BBC World Service',g:'en',c:'news',d:'영국 · 세계 뉴스',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'},
  {id:'bbc1',n:'BBC Radio 1',g:'en',c:'music',d:'영국 · 최신 팝',u:BBC('bbc_radio_one','pool_01505109')},
  {id:'bbc2',n:'BBC Radio 2',g:'en',c:'music',d:'영국 · 팝·올디스',u:BBC('bbc_radio_two','pool_74208725')},
  {id:'bbc3',n:'BBC Radio 3',g:'en',c:'classic',d:'영국 · 클래식',u:BBC('bbc_radio_three','pool_23461179')},
  {id:'bbc4',n:'BBC Radio 4',g:'en',c:'talk',d:'영국 · 시사·드라마',u:BBC('bbc_radio_fourfm','pool_55057080')},
  {id:'bbc6',n:'BBC Radio 6 Music',g:'en',c:'music',d:'영국 · 얼터너티브',u:BBC('bbc_6music','pool_81827798')},
- {id:'npr',n:'NPR News',g:'en',c:'news',d:'미국 · 공영 뉴스',u:'https://npr-ice.streamguys1.com/live.mp3'},
- {id:'wnyc',n:'WNYC 93.9',g:'en',c:'talk',d:'미국 뉴욕 · 공영',u:'https://fm939.wnyc.org/wnycfm'},
- {id:'cnn',n:'CNN',g:'en',c:'news',d:'미국 · 뉴스 오디오',u:'https://tunein.cdnstream1.com/2868_96.mp3'},
- {id:'lbc',n:'LBC',g:'en',c:'news',d:'영국 · 뉴스·토크',u:'https://media-ice.musicradio.com/LBCUKMP3'},
- {id:'times',n:'Times Radio',g:'en',c:'news',d:'영국 · 뉴스',u:'https://timesradio.wireless.radio/stream'},
+ {id:'npr',cap:'npr',n:'NPR News',g:'en',c:'news',d:'미국 · 공영 뉴스',u:'https://npr-ice.streamguys1.com/live.mp3'},
+ {id:'wnyc',cap:'wnyc',n:'WNYC 93.9',g:'en',c:'talk',d:'미국 뉴욕 · 공영',u:'https://fm939.wnyc.org/wnycfm'},
+ {id:'cnn',cap:'cnn',n:'CNN',g:'en',c:'news',d:'미국 · 뉴스 오디오',u:'https://tunein.cdnstream1.com/2868_96.mp3'},
+ {id:'lbc',cap:'lbc',n:'LBC',g:'en',c:'news',d:'영국 · 뉴스·토크',u:'https://media-ice.musicradio.com/LBCUKMP3'},
+ {id:'times',cap:'times',n:'Times Radio',g:'en',c:'news',d:'영국 · 뉴스',u:'https://timesradio.wireless.radio/stream'},
  {id:'kexp',n:'KEXP 90.3',g:'en',c:'music',d:'미국 시애틀 · 인디',u:'https://kexp-mp3-128.streamguys1.com/kexp128.mp3'},
  {id:'classicfm',n:'Classic FM',g:'en',c:'classic',d:'영국 · 클래식',u:'https://media-ice.musicradio.com/ClassicFMMP3'},
  {id:'wqxr',n:'WQXR',g:'en',c:'classic',d:'미국 뉴욕 · 클래식',u:'https://stream.wqxr.org/wqxr'},
@@ -332,7 +350,8 @@ const resolve=async s=>{
  if(s.mbc){const r=await fetch(`${WORKER}/mbc?ch=${s.mbc}`,{cache:'no-store'});const t=(await r.text()).trim();if(!r.ok||!/^https:\/\/\S+m3u8/.test(t))throw new Error('mbc');return t}
  return s.u};
 
-const setState=(t)=>{$('#state').textContent=t};
+const setState=(t)=>{const el=$('#state');el.textContent=t;el.hidden=['ON AIR','정지','대기 중','PC에서 재생 중'].includes(t);
+ $('#outPc').classList.toggle('live',t==='PC에서 재생 중')};
 const killHls=()=>{if(hls){hls.destroy();hls=null}};
 const play=async(s,isRetry)=>{
  if(!s)return;cur=s;want=true;if(!isRetry){retry=0;s._native=0}
@@ -363,7 +382,7 @@ const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.loa
  if(out==='pc'&&pcCode){setState('PC 끄는 중…');pcSend({a:'stop'})}};
 const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);
  $('#playIco').innerHTML=v?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>':'<path d="M7 4v16l13-8z"/>';
- if('mediaSession' in navigator)navigator.mediaSession.playbackState=v?'playing':'paused'};
+ if('mediaSession' in navigator)navigator.mediaSession.playbackState=v?'playing':'paused';try{capUi()}catch(e){}};
 au.addEventListener('playing',()=>{retry=0;setPlaying(true);setState('ON AIR')});
 au.addEventListener('waiting',()=>want&&setState('버퍼링…'));
 au.addEventListener('error',()=>{if(!hls)fail()});
@@ -474,6 +493,29 @@ $('#grid').addEventListener('contextmenu',e=>{const s=e.target.closest('.st');if
 const last=byId(load('last',''));if(last){cur=last;setNeedle(last);$('#nowName').textContent=last.n;$('#nowDesc').textContent='▶ 를 누르면 이어서 듣습니다.'}
 render();
 if(location.hash==='#resume'&&last){play(last)}
+
+// 실시간 자막: 영어 뉴스 방송이면 워커가 지금 소리를 10초씩 받아써 줌 (Whisper). 끝나면 바로 다음 조각을 요청.
+let capOn=load('capOn',true),capKo=load('capKo',false),capRun=0,capLast='';
+const capShow=()=>!!(cur&&cur.cap&&(playing||want));
+const capAdd=(en,ko)=>{const x=$('#capx');x.querySelector('.capw')?.remove();
+ // 앞 조각과 겹친 앞부분은 잘라냄
+ const prev=capLast.split(' ').slice(-6).join(' ');if(prev&&en.startsWith(prev))en=en.slice(prev.length).trim();if(!en)return;capLast=en;
+ x.querySelectorAll('p').forEach(p=>p.classList.add('old'));
+ const p=document.createElement('p');p.textContent=en;if(ko){const k=document.createElement('span');k.className='ko';k.textContent=ko;p.appendChild(k)}
+ x.appendChild(p);while(x.children.length>8)x.firstChild.remove();x.scrollTop=x.scrollHeight};
+const capLoop=async()=>{const my=++capRun,s=cur;
+ while(my===capRun&&capOn&&capShow()&&cur===s){
+  try{const r=await fetch(`${WORKER}/caption?id=${s.cap}${capKo?'&ko=1':''}`,{cache:'no-store'});const j=await r.json();
+   if(my!==capRun||cur!==s)return;if(j.text)capAdd(j.text,j.ko);else if(j.error)await new Promise(z=>setTimeout(z,5000))}
+  catch(e){await new Promise(z=>setTimeout(z,5000))}}};
+let capFor=null;
+const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);$('#capOn').hidden=!(show&&!capOn);
+ if(show&&capOn){if(capFor!==cur){capFor=cur;capLast='';$('#capx').innerHTML='<p class="capw">자막을 받아오는 중… (10초쯤 걸려요)</p>';capLoop()}}
+ else{capRun++;capFor=null}};
+$('#capOff').onclick=()=>{capOn=false;save('capOn',false);capUi()};
+$('#capOn').onclick=()=>{capOn=true;save('capOn',true);capUi()};
+$('#capKo').onclick=()=>{capKo=!capKo;save('capKo',capKo);$('#capKo').setAttribute('aria-pressed',capKo)};
+$('#capKo').setAttribute('aria-pressed',capKo);
 
 // PC 스피커 (노트4 서버 경유)
 let es=null,pcWait=null;
