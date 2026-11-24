@@ -215,7 +215,7 @@ footer{color:var(--mute);font-size:13px}
  </div>
  <div class="tools">
   <div class="segs" role="group" aria-label="소리 나오는 곳">
-   <button class="seg" id="outPhone" aria-pressed="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>이 기기</button>
+   <button class="seg" id="outPhone" aria-pressed="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>이 기기<i class="on-badge" aria-hidden="true">ON</i></button>
    <button class="seg" id="outPc" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>PC 스피커<i class="on-badge" aria-hidden="true">ON</i></button>
   </div>
   <label class="slp" id="slp"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" stroke-linejoin="round"/></svg><span id="sleepLbl">취침</span>
@@ -451,7 +451,8 @@ const fail=()=>{if(!want)return;if(retry<3){retry++;setState(`다시 연결 중 
 const stop=()=>{want=false;killHls();au.pause();au.removeAttribute('src');au.load();setPlaying(false);setState('정지');
  if(out==='pc'&&pcCode){setState('PC 끄는 중…');pcSend({a:'stop'})}};
 const pwrUi=()=>$('#pwrOff').classList.toggle('live',!!(playing||want));
-const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);pwrUi();meterOn();
+const phoneOn=()=>$('#outPhone').classList.toggle('live',!!playing&&out!=='pc');
+const setPlaying=v=>{playing=v;$('#player').classList.toggle('playing',v);pwrUi();meterOn();phoneOn();
  anaRun();
  $('#playIco').innerHTML=v?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>':'<path d="M7 4v16l13-8z"/>';
  if('mediaSession' in navigator)navigator.mediaSession.playbackState=v?'playing':'paused';try{capUi()}catch(e){}};
@@ -659,7 +660,7 @@ const pcListen=()=>{if(es||!pcCode||!window.EventSource)return;
  es=new EventSource(`${NTFY}/${pcCode}-radio-st/sse`);
  es.addEventListener('message',e=>{try{const d=JSON.parse(e.data);pcState(JSON.parse(d.message))}catch(x){}})};
 const pcClose=()=>{if(es){es.close();es=null}clearTimeout(pcWait)};
-const outUi=()=>{$('#outPhone').setAttribute('aria-pressed',out==='phone');$('#outPc').setAttribute('aria-pressed',out==='pc');if(out!=='pc')pcInfo('')};
+const outUi=()=>{phoneOn();$('#outPhone').setAttribute('aria-pressed',out==='phone');$('#outPc').setAttribute('aria-pressed',out==='pc');if(out!=='pc')pcInfo('')};
 const setOut=o=>{if(o===out)return;
  if(o==='pc'&&!pcCode){toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  const was=(playing||want)&&cur;if(was)stop();
