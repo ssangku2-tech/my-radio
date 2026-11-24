@@ -123,16 +123,16 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .qrow{margin:-4px 0 14px}.qrow[hidden]{display:none}
 .search{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:44px;background:var(--card);font-size:16px}
 /* 채널 카드 */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.st{position:relative;text-align:left;background:linear-gradient(var(--card),light-dark(#f1e8d8,#1b1510));border:1px solid var(--line);border-radius:14px;padding:9px 38px 9px 13px;min-height:60px;display:flex;flex-direction:column;justify-content:center;gap:2px;cursor:pointer;box-shadow:0 3px 0 light-dark(#d6c6aa,#0c0907),0 4px 8px -4px rgba(60,40,20,.25);transition:transform .08s,box-shadow .08s;user-select:none;-webkit-user-select:none}
-.st:active{transform:translateY(2px);box-shadow:0 1px 0 light-dark(#d6c6aa,#0c0907)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px 10px;padding-bottom:6px}
+.st{position:relative;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;border-radius:16px;padding:10px 30px 11px;min-height:62px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;background:linear-gradient(light-dark(#fffaf0,#2b221a),light-dark(#efe3cc,#1d1711));border:1px solid light-dark(#d3bf9a,#4a3b2c);box-shadow:inset 0 1px 0 light-dark(#fff,rgba(255,255,255,.08)),inset 0 -3px 0 light-dark(rgba(120,90,50,.10),rgba(0,0,0,.25)),0 5px 0 light-dark(#c9b28a,#0a0806),0 8px 12px -6px rgba(50,30,10,.45);transition:transform .07s,box-shadow .07s}
+.st:active{transform:translateY(4px);box-shadow:inset 0 1px 0 light-dark(#fff,rgba(255,255,255,.06)),0 1px 0 light-dark(#c9b28a,#0a0806),0 2px 4px -2px rgba(50,30,10,.4)}
 .st:hover{border-color:var(--brass)}
-.st.cur{border-color:var(--wal2);background:linear-gradient(#4a3324,#3a281b);color:var(--ivory);transform:translateY(2px);box-shadow:0 1px 0 #1d140d,inset 0 2px 4px rgba(0,0,0,.35)}
+.st.cur{border-color:#2a1c12;background:linear-gradient(#3f2b1e,#4b3423);color:var(--ivory);transform:translateY(4px);box-shadow:inset 0 3px 6px rgba(0,0,0,.45),0 1px 0 #1d140d,0 0 0 2px var(--brass)}
 .st.cur span{color:#d9c9a6}.st.cur .fav{color:#d9c9a6}.st.cur .fav.on{color:var(--brass-l)}
-.st b{font-size:18px;line-height:1.25;letter-spacing:-.01em}
+.st b{font-size:18px;line-height:1.2;letter-spacing:-.01em;max-width:100%}
 .st span{font-size:13px;color:var(--mute);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .st .num{position:absolute;left:-6px;top:-6px;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--brass);color:var(--wal2);display:grid;place-items:center}
-.fav{position:absolute;right:0;top:0;width:38px;height:38px;border:0;background:none;border-radius:10px;color:var(--mute);font-size:20px;line-height:1}
+.fav{position:absolute;right:0;top:0;width:30px;height:30px;font-size:15px!important;border:0;background:none;border-radius:10px;color:var(--mute);font-size:20px;line-height:1}
 .fav.on{color:var(--brass-d)}
 :root:not([data-theme=light]) .fav.on{color:light-dark(var(--brass-d),var(--brass))}
 .empty{color:var(--mute);padding:20px 0}
@@ -159,7 +159,7 @@ footer{color:var(--mute);font-size:13px}
  .dial{height:52px}.now{margin-top:14px}.meter{height:18px;margin:10px 0 12px}
  .panel{gap:6px;padding-top:10px}.transport{gap:8px}.rb{width:42px;height:42px}.rb.big{width:54px;height:54px}.rb svg{width:19px;height:19px}
  .kwrap{width:66px;height:66px}.knob{width:50px;height:50px}.vstep{width:38px;height:38px}.vstep svg{width:18px;height:18px}.vol{gap:3px}
- .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 34px 8px 11px;min-height:56px}.st b{font-size:17px}.st span{font-size:12px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 22px 9px;min-height:58px}.st b{font-size:16.5px}.fav{width:26px!important;height:26px!important;right:1px!important;top:1px!important;font-size:14px!important}.st b{font-size:17px}.st span{font-size:12px}
  .tab{font-size:16px}.top h1{font-size:18px}.slp{padding:0 12px}
  .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}}
 @media(max-width:360px){.tab{font-size:15px}.slp span{display:none}}
@@ -267,8 +267,8 @@ const ST=[
  {id:'heart',n:'Heart London',g:'en',c:'music',d:'영국 · 팝',u:'https://media-ice.musicradio.com/HeartLondonMP3'},
  {id:'capital',n:'Capital FM',g:'en',c:'music',d:'영국 · 히트곡',u:'https://media-ice.musicradio.com/CapitalMP3'},
  {id:'rp',n:'Radio Paradise',g:'en',c:'music',d:'미국 · 광고 없는 록·팝',u:'https://stream.radioparadise.com/mp3-128'},
- {id:'rpmellow',n:'Radio Paradise Mellow',g:'en',c:'music',d:'미국 · 잔잔한 믹스',u:'https://stream.radioparadise.com/mellow-128'},
- {id:'afn',n:'AFN The Eagle',g:'en',c:'music',d:'주한미군 방송 · 팝',u:'https://18533.live.streamtheworld.com/AFNP_OSNAAC_SC'}
+ {id:'rpmellow',n:'RP Mellow',g:'en',c:'music',d:'Radio Paradise · 잔잔한 믹스',u:'https://stream.radioparadise.com/mellow-128'},
+ {id:'afn',n:'AFN Eagle',g:'en',c:'music',d:'주한미군 방송 · 팝',u:'https://18533.live.streamtheworld.com/AFNP_OSNAAC_SC'}
 ];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
