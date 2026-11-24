@@ -143,7 +143,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .st:hover{border-color:var(--brass)}
 .st.cur{border-color:#2a1c12;background:linear-gradient(#3f2b1e,#4b3423);color:var(--ivory);transform:translateY(4px);box-shadow:inset 0 3px 6px rgba(0,0,0,.45),0 1px 0 #1d140d,0 0 0 2px var(--brass)}
 .st.cur span{color:#d9c9a6}.st.cur .fav{color:#d9c9a6}.st.cur .fav.on{color:var(--brass-l)}
-.st b{font-size:18px;line-height:1.2;letter-spacing:-.01em;max-width:100%}
+.st b{display:block;width:100%;font-size:18px;line-height:1.25;letter-spacing:-.01em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st span{font-size:13px;color:var(--mute);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .st .num{position:absolute;left:-6px;top:-6px;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--brass);color:var(--wal2);display:grid;place-items:center}
 .fav{position:absolute;right:0;top:0;width:30px;height:30px;font-size:15px!important;border:0;background:none;border-radius:10px;color:var(--mute);font-size:20px;line-height:1}
@@ -173,7 +173,7 @@ footer{color:var(--mute);font-size:13px}
  .dial{height:52px}.now{margin-top:14px}.meter{height:18px;margin:10px 0 12px}
  .panel{gap:6px;padding-top:10px}.transport{gap:8px}.rb{width:42px;height:42px}.rb.big{width:54px;height:54px}.rb svg{width:19px;height:19px}
  .kwrap{width:66px;height:66px}.knob{width:50px;height:50px}.vstep{width:38px;height:38px}.vstep svg{width:18px;height:18px}.vol{gap:3px}
- .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 22px 9px;min-height:58px}.st b{font-size:16.5px}.fav{width:26px!important;height:26px!important;right:1px!important;top:1px!important;font-size:14px!important}.st b{font-size:17px}.st span{font-size:12px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.st{padding:8px 27px 9px;min-height:58px}.st b{font-size:16.5px}.fav{width:26px!important;height:26px!important;right:1px!important;top:1px!important;font-size:14px!important}.st b{font-size:17px}.st span{font-size:12px}
  .tab{font-size:16px}.top h1{font-size:18px}.slp{padding:0 12px}
  .clock{display:none}.inst{min-height:36px;padding:6px 14px;font-size:14px}.chip{font-size:14px}}
 @media(max-width:360px){.tab{font-size:15px}.slp span{display:none}}
@@ -336,7 +336,13 @@ const render=()=>{
  $('#grid').innerHTML=l.length?l.map(s=>{const fi=favs.indexOf(s.id);return `<div class="st${cur&&cur.id===s.id?' cur':''}" role="button" tabindex="0" data-id="${esc(s.id)}"><b>${esc(s.n)}</b><span>${esc((s.d||'').replace(/^(.*?)\s*·\s*(\d+\.\d\s*MHz)$/,'$2 · $1'))}</span><button class="fav${fi>-1?' on':''}" data-fav="${esc(s.id)}" aria-label="즐겨찾기">${fi>-1?'★':'☆'}</button></div>`}).join('')
  :`<div class="empty">${tab==='fav'?'채널 카드의 ☆을 누르면 여기에 모입니다.':'맞는 채널이 없어요.'}</div>`;
  $('#favNow').classList.toggle('on',!!cur&&favs.includes(cur.id));
+ fitNames();
 };
+// 긴 채널명(예: BBC World Service)은 한 줄에 들어갈 때까지 글자 크기를 줄임 (최소 12px)
+const fitNames=()=>document.querySelectorAll('.st b').forEach(b=>{b.style.fontSize='';let s=parseFloat(getComputedStyle(b).fontSize);
+ while(b.scrollWidth>b.clientWidth+1&&s>12){s-=.5;b.style.fontSize=s+'px'}});
+let fitT;new ResizeObserver(()=>{clearTimeout(fitT);fitT=setTimeout(fitNames,100)}).observe($('#grid'));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitNames);
 document.addEventListener('click',e=>{
  const c=e.target.closest('[data-cat]');if(c){cat=c.dataset.cat;render();return}
  const f=e.target.closest('[data-fav]');if(f){toggleFav(f.dataset.fav);return}
@@ -557,7 +563,14 @@ const capTick=()=>{const t=capClock();let w=[];
  if(capKo){const m=text.match(/[^.?!]+[.?!]+(?=\s|$)/g);const sent=m&&m[m.length-1].trim();
   if(sent&&sent!==CAP.lastSent){CAP.lastSent=sent;const my=capRun;
    fetch(`${WORKER}/translate?text=${encodeURIComponent(sent)}`).then(r=>r.json()).then(j=>{if(my===capRun&&j.ko)$('#capKoLine').textContent=j.ko}).catch(()=>{})}}};
-const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);$('#capOn').hidden=!(show&&!capOn);$('#cap').classList.toggle('ko',capKo);
+let wake=null,wakeAsk=false;
+const wakeUi=on=>{if(on){if(wake||wakeAsk||!('wakeLock' in navigator)||document.visibilityState!=='visible')return;wakeAsk=true;
+  navigator.wakeLock.request('screen').then(w=>{wakeAsk=false;wake=w;w.addEventListener('release',()=>{if(wake===w)wake=null});
+   if($('#cap').hidden){w.release().catch(()=>{});wake=null}}).catch(()=>{wakeAsk=false})}
+ else if(wake){const w=wake;wake=null;w.release().catch(()=>{})}};
+// 앱을 잠깐 내렸다 다시 열면 화면 켜 두기가 풀리므로 다시 요청
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wakeUi(!$('#cap').hidden)});
+const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);wakeUi(show&&capOn);$('#capOn').hidden=!(show&&!capOn);$('#cap').classList.toggle('ko',capKo);
  if(show&&capOn){const mode=mse&&mse.s===cur?'sync':'live';
   if(capFor!==cur||CAP.mode!==mode){capFor=cur;capReset(mode);if(mode==='live')capLoop()}
   if(!capT)capT=setInterval(capTick,150)}
