@@ -41,18 +41,17 @@ function wordTimes(out) {
   return words;
 }
 
-// 받아쓰기: 1) Deepgram Nova-3 (영어 전용, 1~3초로 빠르고 꾸준함)
-// 2) 안 되면 Whisper large-v3-turbo (요즘 Cloudflare 쪽이 가끔 고장·2~20초로 들쭉날쭉) 3) 마지막으로 기본 whisper
-// 앱은 20초면 포기하므로 단계마다 시간 제한을 둠
+// 받아쓰기 (무료 사용량: 하루 10,000 뉴런, 한국 시간 오전 9시에 새로 채워짐)
+// 1) Whisper large-v3-turbo: 1분에 약 47뉴런 → 하루 약 3시간 반. 가끔 늦거나 고장 나서 8초 제한
+// 2) 기본 whisper: 1분에 약 41뉴런, 정확도는 조금 낮음
+// 3) Deepgram Nova-3: 빠르고 꾸준하지만 1분에 약 473뉴런(10배)이라 마지막 대비로만
 const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout ' + ms + 'ms')), ms))]);
+const isQuota = e => /4006|daily free allocation|^quota$/i.test(String(e && e.message || e));
 async function whisper(env, audio, prompt, skip) {
-  const errs = [], fail = (m, e) => errs.push(m + ': ' + String(e && e.message || e).slice(0, 80));
-  if (skip !== 'nova') try {
-    const o = await within(env.AI.run('@cf/deepgram/nova-3', { audio: { body: new Blob([audio]).stream(), contentType: 'audio/wav' }, punctuate: true, smart_format: true, language: 'en' }), 7000);
-    const alt = o?.results?.channels?.[0]?.alternatives?.[0];
-    if (alt) return { m: 'nova-3', text: String(alt.transcript || ''), words: (alt.words || []).map(w => ({ word: w.punctuated_word || w.word, start: w.start, end: w.end })) };
-    fail('nova-3', 'no result');
-  } catch (e) { fail('nova-3', e); }
+  const errs = [], fail = (m, e) => {
+    if (isQuota(e)) throw new Error('quota');   // 오늘 무료 사용량을 다 씀: 다른 모델도 똑같이 막힘
+    errs.push(m + ': ' + String(e && e.message || e).slice(0, 80));
+  };
   if (skip !== 'turbo') try {
     const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
     if (prompt) input.initial_prompt = prompt;
@@ -60,14 +59,22 @@ async function whisper(env, audio, prompt, skip) {
     return Object.assign(o || {}, { m: 'turbo' });
   } catch (e) { fail('turbo', e); }
   try {
-    const out = await env.AI.run('@cf/openai/whisper', { audio: [...audio] });
+    const out = await within(env.AI.run('@cf/openai/whisper', { audio: [...audio] }), 8000);
     // 이 모델은 언어를 정할 수 없어 조용할 때 다른 언어 헛소리("Субтитры…")를 냄 → 영어가 아니면 버림
     const t = String(out?.text || '');
     if (/[^\u0000-\u00bf\u2000-\u206f\s]/.test(t) || /subtitles|subtitle by|amara\.org|thanks for watching/i.test(t)) return { text: '', words: [], m: 'whisper' };
     return Object.assign(out || {}, { m: 'whisper' });
   } catch (e) { fail('whisper', e); }
+  try {
+    const o = await within(env.AI.run('@cf/deepgram/nova-3', { audio: { body: new Blob([audio]).stream(), contentType: 'audio/wav' }, punctuate: true, smart_format: true, language: 'en' }), 6000);
+    const alt = o?.results?.channels?.[0]?.alternatives?.[0];
+    if (alt) return { m: 'nova-3', text: String(alt.transcript || ''), words: (alt.words || []).map(w => ({ word: w.punctuated_word || w.word, start: w.start, end: w.end })) };
+    fail('nova-3', 'no result');
+  } catch (e) { fail('nova-3', e); }
   throw new Error(errs.join(' | '));
 }
+// 오류 응답: 오늘 무료 사용량을 다 쓴 경우는 앱이 알아보게 'quota' (429)
+const errJson = e => isQuota(e) ? json({ error: 'quota' }, 429) : json({ error: String(e && e.message || e).slice(0, 200) }, 502);
 
 function b64(u8) {
   let s = '';
@@ -102,7 +109,7 @@ export default {
         }
         return json(res);
       } catch (e) {
-        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+        return errJson(e);
       }
     }
     // POST /transcribe?prompt=...  앱이 지금 재생 중인 소리 3초 조각(바이트)을 보내면 받아쓴 글을 돌려줌.
@@ -120,7 +127,7 @@ export default {
         if (url.searchParams.get('debug') === '1') res.raw = JSON.stringify(out).slice(0, 1500);
         return json(res);
       } catch (e) {
-        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+        return errJson(e);
       }
     }
     // GET /translate?text=...  영어 한 문장을 한국어로
@@ -131,7 +138,7 @@ export default {
         const tr = await env.AI.run('@cf/meta/m2m100-1.2b', { text, source_lang: 'english', target_lang: 'korean' });
         return json({ ko: String(tr?.translated_text || '').trim() });
       } catch (e) {
-        return json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+        return errJson(e);
       }
     }
     if (url.pathname === '/ping') return new Response('ok', { headers: CORS });
