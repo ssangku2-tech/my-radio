@@ -41,6 +41,26 @@ function wordTimes(out) {
   return words;
 }
 
+// Whisper 받아쓰기: large-v3-turbo가 Cloudflare 쪽 고장(GPU 오류 등)으로 실패하면 한 번 더, 그래도 안 되면 기본 whisper로
+async function whisper(env, audio, prompt) {
+  const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
+  if (prompt) input.initial_prompt = prompt;
+  let err;
+  for (let i = 0; i < 2; i++) {
+    try { return await env.AI.run('@cf/openai/whisper-large-v3-turbo', input); } catch (e) { err = e; }
+  }
+  for (const m of ['@cf/openai/whisper', '@cf/openai/whisper-tiny-en']) {
+    try {
+      const out = await env.AI.run(m, { audio: [...audio] });
+      // 이 모델은 언어를 정할 수 없어 조용할 때 다른 언어 헛소리("Субтитры…")를 냄 → 영어가 아니면 버림
+      const t = String(out?.text || '');
+      if (/[^\u0000-\u00bf\u2000-\u206f\s]/.test(t) || /subtitles|subtitle by|amara\.org|thanks for watching/i.test(t)) return { text: '', words: [] };
+      return out;
+    } catch (e) { err = new Error(String(err && err.message || err).slice(0, 90) + ' | ' + m.split('/').pop() + ': ' + String(e && e.message || e).slice(0, 90)); }
+  }
+  throw err;
+}
+
 function b64(u8) {
   let s = '';
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
@@ -65,7 +85,7 @@ export default {
       try {
         const audio = await grab(src, 6, 100000);    // PC 스피커일 때만 씀: ~6초
         if (audio.length < 8000) return json({ text: '' });
-        const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true });
+        const out = await whisper(env, audio);
         const text = String(out?.text || '').trim();
         const res = { text, words: wordTimes(out) };
         if (url.searchParams.get('ko') === '1' && text) {
@@ -86,10 +106,7 @@ export default {
         const audio = new Uint8Array(await req.arrayBuffer());
         if (audio.length < 2000) return json({ text: '' });
         if (audio.length > 400000) return json({ error: 'too long' }, 413);
-        const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
-        const prompt = (url.searchParams.get('prompt') || '').slice(-300);
-        if (prompt) input.initial_prompt = prompt;
-        const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', input);
+        const out = await whisper(env, audio, (url.searchParams.get('prompt') || '').slice(-300));
         // 단어마다 이 조각 안에서 몇 초에 말했는지 [단어, 시작, 끝] → 앱이 지금 말하는 단어를 짚어 줌
         const res = { text: String(out?.text || '').trim(), words: wordTimes(out) };
         if (url.searchParams.get('debug') === '1') res.raw = JSON.stringify(out).slice(0, 1500);
