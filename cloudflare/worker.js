@@ -41,30 +41,32 @@ function wordTimes(out) {
   return words;
 }
 
-// Whisper 받아쓰기: large-v3-turbo가 Cloudflare 쪽 고장(GPU 오류 등)으로 실패하면 Deepgram Nova-3, 그래도 안 되면 기본 whisper로
+// 받아쓰기: 1) Deepgram Nova-3 (영어 전용, 1~3초로 빠르고 꾸준함)
+// 2) 안 되면 Whisper large-v3-turbo (요즘 Cloudflare 쪽이 가끔 고장·2~20초로 들쭉날쭉) 3) 마지막으로 기본 whisper
+// 앱은 20초면 포기하므로 단계마다 시간 제한을 둠
+const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout ' + ms + 'ms')), ms))]);
 async function whisper(env, audio, prompt, skip) {
-  const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
-  if (prompt) input.initial_prompt = prompt;
-  let err;
-  for (let i = 0; i < (skip ? 0 : 1); i++) {
-    try { const o = await env.AI.run('@cf/openai/whisper-large-v3-turbo', input); return Object.assign(o || {}, { m: 'turbo' }); } catch (e) { err = e; }
-  }
-  // 1차 대비: Deepgram Nova-3 (영어 전용·단어 시간 있음)
-  try {
-    const o = await env.AI.run('@cf/deepgram/nova-3', { audio: { body: new Blob([audio]).stream(), contentType: 'audio/wav' }, punctuate: true, smart_format: true, language: 'en' });
+  const errs = [], fail = (m, e) => errs.push(m + ': ' + String(e && e.message || e).slice(0, 80));
+  if (skip !== 'nova') try {
+    const o = await within(env.AI.run('@cf/deepgram/nova-3', { audio: { body: new Blob([audio]).stream(), contentType: 'audio/wav' }, punctuate: true, smart_format: true, language: 'en' }), 7000);
     const alt = o?.results?.channels?.[0]?.alternatives?.[0];
     if (alt) return { m: 'nova-3', text: String(alt.transcript || ''), words: (alt.words || []).map(w => ({ word: w.punctuated_word || w.word, start: w.start, end: w.end })) };
-  } catch (e) { err = new Error(String(err && err.message || err).slice(0, 90) + ' | nova-3: ' + String(e && e.message || e).slice(0, 90)); }
-  for (const m of ['@cf/openai/whisper', '@cf/openai/whisper-tiny-en']) {
-    try {
-      const out = await env.AI.run(m, { audio: [...audio] });
-      // 이 모델은 언어를 정할 수 없어 조용할 때 다른 언어 헛소리("Субтитры…")를 냄 → 영어가 아니면 버림
-      const t = String(out?.text || '');
-      if (/[^\u0000-\u00bf\u2000-\u206f\s]/.test(t) || /subtitles|subtitle by|amara\.org|thanks for watching/i.test(t)) return { text: '', words: [], m: m.split('/').pop() };
-      return Object.assign(out || {}, { m: m.split('/').pop() });
-    } catch (e) { err = new Error(String(err && err.message || err).slice(0, 90) + ' | ' + m.split('/').pop() + ': ' + String(e && e.message || e).slice(0, 90)); }
-  }
-  throw err;
+    fail('nova-3', 'no result');
+  } catch (e) { fail('nova-3', e); }
+  if (skip !== 'turbo') try {
+    const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
+    if (prompt) input.initial_prompt = prompt;
+    const o = await within(env.AI.run('@cf/openai/whisper-large-v3-turbo', input), 8000);
+    return Object.assign(o || {}, { m: 'turbo' });
+  } catch (e) { fail('turbo', e); }
+  try {
+    const out = await env.AI.run('@cf/openai/whisper', { audio: [...audio] });
+    // 이 모델은 언어를 정할 수 없어 조용할 때 다른 언어 헛소리("Субтитры…")를 냄 → 영어가 아니면 버림
+    const t = String(out?.text || '');
+    if (/[^\u0000-\u00bf\u2000-\u206f\s]/.test(t) || /subtitles|subtitle by|amara\.org|thanks for watching/i.test(t)) return { text: '', words: [], m: 'whisper' };
+    return Object.assign(out || {}, { m: 'whisper' });
+  } catch (e) { fail('whisper', e); }
+  throw new Error(errs.join(' | '));
 }
 
 function b64(u8) {
@@ -112,7 +114,7 @@ export default {
         const audio = new Uint8Array(await req.arrayBuffer());
         if (audio.length < 2000) return json({ text: '' });
         if (audio.length > 400000) return json({ error: 'too long' }, 413);
-        const out = await whisper(env, audio, (url.searchParams.get('prompt') || '').slice(-300), url.searchParams.get('skip') === 'turbo');
+        const out = await whisper(env, audio, (url.searchParams.get('prompt') || '').slice(-300), url.searchParams.get('skip'));
         // 단어마다 이 조각 안에서 몇 초에 말했는지 [단어, 시작, 끝] → 앱이 지금 말하는 단어를 짚어 줌
         const res = { text: String(out?.text || '').trim(), words: wordTimes(out), m: out?.m };
         if (url.searchParams.get('debug') === '1') res.raw = JSON.stringify(out).slice(0, 1500);
