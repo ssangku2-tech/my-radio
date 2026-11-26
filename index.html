@@ -665,8 +665,9 @@ const setOut=o=>{if(o===out)return;
  if(o==='pc'&&!pcCode){toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  const was=(playing||want)&&cur;if(was)stop();
  out=o;save('out',o);outUi();
- if(o==='pc'){pcListen();setTimeout(()=>pcSend({a:'ping'}),300);pcTimeout(15000,'노트4 서버가 응답하지 않아요.')}else pcClose();
- if(was)setTimeout(()=>play(cur),o==='pc'?600:200)};
+ // PC 스피커를 고르면 꺼져 있었어도 지금(또는 마지막) 채널을 바로 PC로 보내 소리가 나게 함
+ if(o==='pc'){pcListen();setTimeout(()=>play(cur||byId(load('last','kbs1fm'))||ST[0]),600)}
+ else{pcClose();if(was)setTimeout(()=>play(cur),200)}};
 $('#outPhone').onclick=()=>setOut('phone');$('#outPc').onclick=()=>setOut('pc');
 const setCode=c=>{c=String(c||'').trim();if(!/^[A-Za-z0-9_-]{6,64}$/.test(c)){toast('연결 코드가 올바르지 않아요');return false}pcCode=c;save('pcCode',c);pcClose();return true};
 // 연결 링크(…/#pc=코드)로 열면 코드를 저장하고 주소창에서 지움
