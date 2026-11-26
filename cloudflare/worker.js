@@ -41,21 +41,62 @@ function wordTimes(out) {
   return words;
 }
 
-// 받아쓰기 (무료 사용량: 하루 10,000 뉴런, 한국 시간 오전 9시에 새로 채워짐)
-// 1) Whisper large-v3-turbo: 1분에 약 47뉴런 → 하루 약 3시간 반. 가끔 늦거나 고장 나서 8초 제한
+// 받아쓰기
+// 0) Groq: 같은 Whisper large-v3-turbo를 무료 계정으로 하루 약 2,000번·8시간까지. 키(GROQ_KEY 비밀값)가 있을 때만.
+//    한 번에 최소 10초로 계산되므로 앱이 소리를 10초 넘게 모아 보냄. 한도에 걸리면 알려 준 시간 동안 건너뜀
+// 그다음 Cloudflare Workers AI (무료 사용량: 하루 10,000 뉴런, 한국 시간 오전 9시에 새로 채워짐)
+// 1) Whisper large-v3-turbo: 1분에 약 47뉴런 → 하루 약 3시간 반. 가끔 늦거나 고장 나서 10초 제한
 // 2) 기본 whisper: 1분에 약 41뉴런, 정확도는 조금 낮음
-// 3) Deepgram Nova-3: 빠르고 꾸준하지만 1분에 약 473뉴런(10배)이라 마지막 대비로만
+// (Deepgram Nova-3는 1분에 약 473뉴런(10배)이라 뺌: 시간 초과로 넘어가도 앞 모델 값은 그대로 나가서,
+//  turbo가 늦는 날엔 세 모델 값이 한꺼번에 나가 하루 한도가 금방 바닥났음)
 const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout ' + ms + 'ms')), ms))]);
 const isQuota = e => /4006|daily free allocation|^quota$/i.test(String(e && e.message || e));
+let groqOff = 0;
+async function groq(env, audio, prompt) {
+  const wav = audio[0] === 0x52 && audio[1] === 0x49 && audio[2] === 0x46;   // 'RIF'F
+  const fd = new FormData();
+  fd.append('file', new Blob([audio], { type: wav ? 'audio/wav' : 'audio/mpeg' }), wav ? 'a.wav' : 'a.mp3');
+  fd.append('model', 'whisper-large-v3-turbo');
+  fd.append('language', 'en');
+  fd.append('temperature', '0');
+  fd.append('response_format', 'verbose_json');
+  fd.append('timestamp_granularities[]', 'word');
+  fd.append('timestamp_granularities[]', 'segment');
+  if (prompt) fd.append('prompt', prompt);
+  const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + env.GROQ_KEY }, body: fd });
+  if (r.status === 429) {   // 한도: 알려 준 시간(초)만큼 쉬고 그동안 Cloudflare로
+    groqOff = Date.now() + Math.min(Math.max(Number(r.headers.get('retry-after')) || 60, 20), 6 * 3600) * 1000;
+    throw new Error('groq 429');
+  }
+  if (r.status === 401 || r.status === 403) { groqOff = Date.now() + 3600e3; throw new Error('groq key ' + r.status); }
+  if (!r.ok) throw new Error('groq ' + r.status + ' ' + (await r.text()).slice(0, 80));
+  const o = await r.json();
+  // 말이 없는 구간(Whisper가 '말 없음'이라 본 곳)의 헛소리는 버림
+  const bad = (o.segments || []).filter(g => g.no_speech_prob > 0.6 && g.avg_logprob < -1);
+  let words = (o.words || []).filter(w => !bad.some(g => w.start >= g.start - 0.05 && w.start < g.end));
+  const segs = o.segments || [], text = segs.length ? segs.filter(g => !bad.includes(g)).map(g => String(g.text).trim()).join(' ') : o.text;
+  // 단어 목록에는 문장부호가 빠져 있을 수 있음 → 글에서 같은 단어를 찾아 부호째로 바꿈 (자막을 문장·쉼표에서 끊는 데 씀)
+  const toks = String(text || '').trim().split(/\s+/), norm = x => String(x).toLowerCase().replace(/[^a-z0-9']/g, '');
+  let i = 0;
+  words = words.map(w => {
+    const n = norm(w.word);
+    for (let k = i; k < Math.min(toks.length, i + 4); k++) if (n && norm(toks[k]) === n) { i = k + 1; return { word: toks[k], start: w.start, end: w.end }; }
+    return w;
+  });
+  return { text: String(text || '').trim(), words };
+}
 async function whisper(env, audio, prompt, skip) {
   const errs = [], fail = (m, e) => {
-    if (isQuota(e)) throw new Error('quota');   // 오늘 무료 사용량을 다 씀: 다른 모델도 똑같이 막힘
+    if (isQuota(e)) throw new Error('quota', { cause: String(e && e.message || e) });   // 오늘 무료 사용량을 다 씀: 다른 모델도 똑같이 막힘
     errs.push(m + ': ' + String(e && e.message || e).slice(0, 80));
   };
+  if (env.GROQ_KEY && Date.now() > groqOff && skip !== 'groq') try {
+    return Object.assign(await within(groq(env, audio, prompt), 8000), { m: 'groq' });
+  } catch (e) { errs.push('groq: ' + String(e && e.message || e).slice(0, 80)); }
   if (skip !== 'turbo') try {
     const input = { audio: b64(audio), language: 'en', task: 'transcribe', vad_filter: true };
     if (prompt) input.initial_prompt = prompt;
-    const o = await within(env.AI.run('@cf/openai/whisper-large-v3-turbo', input), 8000);
+    const o = await within(env.AI.run('@cf/openai/whisper-large-v3-turbo', input), 10000);
     return Object.assign(o || {}, { m: 'turbo' });
   } catch (e) { fail('turbo', e); }
   try {
@@ -65,16 +106,10 @@ async function whisper(env, audio, prompt, skip) {
     if (/[^\u0000-\u00bf\u2000-\u206f\s]/.test(t) || /subtitles|subtitle by|amara\.org|thanks for watching/i.test(t)) return { text: '', words: [], m: 'whisper' };
     return Object.assign(out || {}, { m: 'whisper' });
   } catch (e) { fail('whisper', e); }
-  try {
-    const o = await within(env.AI.run('@cf/deepgram/nova-3', { audio: { body: new Blob([audio]).stream(), contentType: 'audio/wav' }, punctuate: true, smart_format: true, language: 'en' }), 6000);
-    const alt = o?.results?.channels?.[0]?.alternatives?.[0];
-    if (alt) return { m: 'nova-3', text: String(alt.transcript || ''), words: (alt.words || []).map(w => ({ word: w.punctuated_word || w.word, start: w.start, end: w.end })) };
-    fail('nova-3', 'no result');
-  } catch (e) { fail('nova-3', e); }
   throw new Error(errs.join(' | '));
 }
 // 오류 응답: 오늘 무료 사용량을 다 쓴 경우는 앱이 알아보게 'quota' (429)
-const errJson = e => isQuota(e) ? json({ error: 'quota' }, 429) : json({ error: String(e && e.message || e).slice(0, 200) }, 502);
+const errJson = e => isQuota(e) ? json({ error: 'quota', detail: String(e && e.cause || '').slice(0, 160) }, 429) : json({ error: String(e && e.message || e).slice(0, 200) }, 502);
 
 function b64(u8) {
   let s = '';
@@ -112,7 +147,7 @@ export default {
         return errJson(e);
       }
     }
-    // POST /transcribe?prompt=...  앱이 지금 재생 중인 소리 3초 조각(바이트)을 보내면 받아쓴 글을 돌려줌.
+    // POST /transcribe?prompt=...  앱이 곧 재생할 소리 조각(4~20초 WAV)을 보내면 받아쓴 글을 돌려줌.
     // prompt: 바로 앞 자막 (문장이 조각 사이에서 끊겨도 이어지게)
     if (url.pathname === '/transcribe') {
       if (req.method === 'OPTIONS') return new Response(null, { headers: { ...CORS, 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
@@ -120,7 +155,7 @@ export default {
       try {
         const audio = new Uint8Array(await req.arrayBuffer());
         if (audio.length < 2000) return json({ text: '' });
-        if (audio.length > 400000) return json({ error: 'too long' }, 413);
+        if (audio.length > 900000) return json({ error: 'too long' }, 413);
         const out = await whisper(env, audio, (url.searchParams.get('prompt') || '').slice(-300), url.searchParams.get('skip'));
         // 단어마다 이 조각 안에서 몇 초에 말했는지 [단어, 시작, 끝] → 앱이 지금 말하는 단어를 짚어 줌
         const res = { text: String(out?.text || '').trim(), words: wordTimes(out), m: out?.m };
@@ -130,6 +165,7 @@ export default {
         return errJson(e);
       }
     }
+    if (url.pathname === '/stt') return json({ groq: !!env.GROQ_KEY, groqOff: Math.max(0, Math.round((groqOff - Date.now()) / 1000)) });
     // GET /translate?text=...  영어 한 문장을 한국어로
     if (url.pathname === '/translate') {
       const text = (url.searchParams.get('text') || '').slice(0, 600);
