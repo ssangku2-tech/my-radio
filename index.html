@@ -669,9 +669,9 @@ const pcTimeout=(ms,msg)=>{clearTimeout(pcWait);pcWait=setTimeout(()=>{if(out!==
 const pcCast=s=>{if(!pcCode){setOut('phone');toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  setState('PC로 보내는 중…');pcInfo('');pcListen();
  pcSend(Object.assign({a:'cast',name:s.n,vol:muted?0:+volEl.value,id:Date.now()},castOf(s),s.cap?{cap:s.cap,mime:s.mime||''}:{}));
- pcTimeout(20000,'노트4 서버가 응답하지 않아요. 노트4와 PC의 PC 스피커 창이 켜져 있는지 확인해 주세요.')};
+ pcTimeout(20000,'노트4 서버가 응답하지 않아요. 노트4가 켜져 있고 와이파이에 연결돼 있는지 확인해 주세요.')};
 const pcState=m=>{if(!m||m.t!=='st'||out!=='pc')return;clearTimeout(pcWait);
- if(!m.online){want=false;setPlaying(false);setState('PC 꺼짐');pcInfo('PC의 PC 스피커 창이 닫혀 있어요');return}
+ if(!m.online){want=false;setPlaying(false);setState('PC 꺼짐');pcInfo('PC가 꺼져 있거나 절전 중이에요');toast('PC가 꺼져 있거나 절전 중이에요. PC를 깨운 뒤 1분쯤 지나 다시 눌러 주세요.');return}
  pcInfo(m.on?`PC: ${String(m.title||'').replace(/^\S+\s/,'')} · 소리 ${m.vol}%`:'PC 스피커 연결됨');
  if(m.on){want=true;setPlaying(true);setState('PC에서 재생 중')}
  else{want=false;setPlaying(false);setState(m.re==='cast'?'PC 재생 실패':'정지')}};
