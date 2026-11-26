@@ -423,9 +423,9 @@ const play=async(s,isRetry)=>{
  mediaMeta();
 };
 // 자막 방송: 방송 소리를 앱이 직접 받아 재생하면서(MediaSource), 같은 소리를 4초씩 잘라 받아쓰기에 보냄.
-// 받아쓰기(Groq)는 한 번에 최소 10초로 계산되어 8초씩 보냄(4초씩 보내면 한 시간 한도를 넘김).
-// 처음 9초를 모아 두고 재생을 시작하므로, 8초 조각의 자막이 그 부분이 들리기 전에 도착함.
-const CAP_SEC=8,START_BUF=9;let mse=null;
+// 받아쓰기(Groq)는 한 번에 최소 10초로 계산되고 하루 2,000번까지라 10초씩 보냄 (TV와 함께 씀).
+// 처음 12초를 모아 두고 재생을 시작하므로, 10초 조각의 자막이 그 부분이 들리기 전에 도착함.
+const CAP_SEC=10,START_BUF=12;let mse=null;
 const useMse=s=>!!(s.cap&&capOn&&!s._nomse&&window.MediaSource&&MediaSource.isTypeSupported(s.mime||'audio/mpeg'));
 const stopMse=()=>{if(mse){mse.dead=1;try{mse.ctrl.abort()}catch(e){}mse=null}};
 const joinU8=a=>{let n=0;for(const x of a)n+=x.length;const o=new Uint8Array(n);let i=0;for(const x of a){o.set(x,i);i+=x.length}return o};
