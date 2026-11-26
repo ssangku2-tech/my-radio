@@ -267,7 +267,6 @@ const ST=[
  {id:'tbs',n:'TBS FM',g:'kr',c:'talk',d:'서울 · 95.1MHz',u:'https://cdnfm.tbs.seoul.kr/tbs/_definst_/tbs_fm_web_360.smil/playlist.m3u8'},
  {id:'tbsefm',n:'TBS eFM',g:'kr',c:'talk',d:'서울 영어방송 · 101.3MHz',u:'https://cdnefm.tbs.seoul.kr/tbs/_definst_/tbs_efm_web_360.smil/playlist.m3u8'},
  {id:'gugak',n:'국악방송',g:'kr',c:'classic',d:'국악 · 99.1MHz',u:'https://mgugaklive.nowcdn.co.kr/gugakradio/gugakradio.stream/playlist.m3u8'},
- {id:'kfn',n:'국방FM',g:'kr',c:'music',d:'국군방송 · 100.0MHz',u:'https://mediaworks.dema.mil.kr/live_edge/audio.sdp/playlist.m3u8'},
  {id:'arirang',n:'Arirang Radio',g:'kr',c:'news',d:'아리랑 영어 라디오',u:'https://amdlive-ch03-ctnd-com.akamaized.net/arirang_3ch/smil:arirang_3ch.smil/playlist.m3u8'},
  // 해외 영어권
  {id:'bbcws',cap:'bbcws',n:'BBC World Service',g:'en',c:'news',d:'영국 · 세계 뉴스',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'},
@@ -302,6 +301,9 @@ const toastEl=$('#toast');let tt;
 const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toastEl.classList.remove('show'),2600)};
 
 let favs=load('favs',['kbs1fm','mbcfm4u','sbspower','bbcws']);
+// 국방FM은 뺐음: 내 목록에 있던 자리에는 KBS 클래식FM을, 마지막에 듣던 채널이면 KBS 클래식FM으로
+if(favs.includes('kfn')){favs=favs.includes('kbs1fm')?favs.filter(x=>x!=='kfn'):favs.map(x=>x==='kfn'?'kbs1fm':x);save('favs',favs)}
+if(load('last','')==='kfn')save('last','kbs1fm');
 let mine=load('mine',[]);
 let recent=load('recent',[]);
 let stats=load('stats',{});
