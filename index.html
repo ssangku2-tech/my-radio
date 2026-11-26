@@ -306,6 +306,8 @@ let cur=null,playing=false,hls=null,retry=0,want=false;
 // MBC 주소는 Cloudflare 워커가, PC 스피커 명령은 ntfy → 노트4 서버가 받아 PC 'PC 스피커' 창으로 전달
 const WORKER='https://my-radio.ssangku2.workers.dev',NTFY='https://ntfy.sh';
 let out=load('out','phone'),pcCode=load('pcCode','');
+// 라디오에 연결 코드가 없으면, 같은 폰의 '나만의 TV'에 저장된 코드를 그대로 씀
+if(!pcCode){try{const t=JSON.parse(localStorage.getItem('tv.pcCode')||'""');if(/^[A-Za-z0-9_-]{6,64}$/.test(t)){pcCode=t;save('pcCode',t)}}catch(e){}}
 const pcSend=m=>fetch(`${NTFY}/${pcCode}-radio`,{method:'POST',body:JSON.stringify(m)}).catch(()=>toast('인터넷 연결을 확인해 주세요'));
 const au=$('#au');
 const all=()=>ST.concat(mine);
