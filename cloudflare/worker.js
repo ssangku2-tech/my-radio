@@ -186,7 +186,38 @@ export default {
         return errJson(e);
       }
     }
+    // PC 스피커 자막 우편함: PC 스피커 창이 자기가 낼 소리를 받아써서 단어마다 '몇 시에 들리는지'를 넣고(POST),
+    // 폰이 읽어 감(GET). k = 연결 코드. 응답의 now = 이 서버 시계(ms): 두 기기가 같은 시계로 맞춤
+    if (url.pathname === '/pccap') {
+      if (req.method === 'OPTIONS') return new Response(null, { headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
+      const k = url.searchParams.get('k') || '';
+      if (!/^[A-Za-z0-9_-]{6,64}$/.test(k)) return json({ error: 'bad key' }, 400);
+      const stub = env.CAPHUB.get(env.CAPHUB.idFromName(k));
+      return stub.fetch(req);
+    }
     if (url.pathname === '/ping') return new Response('ok', { headers: CORS });
     return new Response('not found', { status: 404, headers: CORS });
   }
 };
+
+// 연결 코드 하나에 하나: 최근 3분 자막 조각을 메모리에 둠 (저장하지 않음)
+export class CapHub {
+  constructor(state) { this.segs = []; this.ch = ''; }
+  async fetch(req) {
+    const url = new URL(req.url), now = Date.now();
+    if (req.method === 'POST') {
+      let b; try { b = await req.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+      const ch = String(b.ch || '').slice(0, 20);
+      if (ch !== this.ch) { this.ch = ch; this.segs = []; }   // 채널이 바뀌면 비움
+      if (b.reset) { this.segs = []; return json({ ok: 1, now }); }
+      const s = Number(b.s), e = Number(b.e);
+      if (isFinite(s) && isFinite(e) && b.text) {
+        this.segs.push({ id: now + Math.random(), at: now, s, e, text: String(b.text).slice(0, 2000), words: Array.isArray(b.words) ? b.words.slice(0, 400) : [] });
+        this.segs = this.segs.filter(g => g.e > now - 180000).slice(-40);
+      }
+      return json({ ok: 1, now });
+    }
+    const after = Number(url.searchParams.get('after')) || 0;
+    return json({ now, ch: this.ch, segs: this.segs.filter(g => g.at > after) });
+  }
+}

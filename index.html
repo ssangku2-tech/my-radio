@@ -578,13 +578,15 @@ if(location.hash==='#resume'&&last){setTimeout(()=>play(last),0)}
 // sync: 앱이 직접 재생(MediaSource) → 재생 시계에 맞춤 / live: PC 스피커 등 → 받는 대로 바로 흘려 보여 줌.
 let capOn=load('capOn',true),capKo=load('capKo',false),capRun=0,capFor=null,capT=null;
 const CAP={mode:'',list:[],prompt:'',lastSent:'',now:-2,y:null,moved:0,end:0};
+let fol=null;   // PC 스피커 자막: PC가 만들어 둔 자막을 읽어 오는 중
 const capShow=()=>!!(cur&&cur.cap&&(playing||want));
 const capClean=t=>{t=String(t||'').replace(/\s+/g,' ').trim().replace(/^(\.{2,}|…)\s*/,'').replace(/\s*(\.{2,}|…)$/,'');return /^(thank you|thanks for watching|you|bye|\.+)[.!]*$/i.test(t)?'':t};
-const capClock=()=>CAP.mode==='sync'?au.currentTime:performance.now()/1000;
+// pcsync: 워커 시계(초). PC가 단어마다 '워커 시계로 몇 초에 스피커에서 나오는지'를 적어 둠
+const capClock=()=>CAP.mode==='sync'?au.currentTime:CAP.mode==='pcsync'&&fol?(Date.now()+fol.off)/1000:performance.now()/1000;
 const capReset=mode=>{capRun++;CAP.mode=mode;CAP.list=[];CAP.prompt='';CAP.lastSent='';CAP.now=-2;CAP.y=null;CAP.end=0;
  const el=$('#capEn');el.style.transition='none';el.style.transform='';el.offsetHeight;el.style.transition='';$('#capx').scrollTop=0;
- el.textContent=mode==='sync'?'소리에 맞춰 자막을 준비하고 있어요…':'자막을 받아오는 중… (몇 초 걸려요)';el.classList.add('wait');
- $('#capKoLine').textContent='';$('#capNote').textContent=mode==='sync'?'· 영어 · 소리에 맞춤':'· 영어 · 몇 초 늦음'};
+ el.textContent=mode==='live'?'자막을 받아오는 중… (몇 초 걸려요)':'소리에 맞춰 자막을 준비하고 있어요…';el.classList.add('wait');
+ $('#capKoLine').textContent='';$('#capNote').textContent=mode==='sync'?'· 영어 · 소리에 맞춤':mode==='pcsync'?'· 영어 · PC 소리에 맞춤':'· 영어 · 몇 초 늦음'};
 // 받아쓴 조각 → 단어마다 '재생 시계로 몇 초에 들리는지'를 붙여 자막 끝에 이어 붙임 (이미 놓인 줄은 건드리지 않음)
 // wt: [[단어, 조각 안 시작초, 끝초], …] (받아쓰기가 알려 준 단어별 시간). 없으면 조각 시간에 고르게 나눔.
 const capSeg=(start,end,text,wt)=>{let ws=[];
@@ -604,7 +606,7 @@ const toWav=async u8=>{const b=await new OfflineAudioContext(1,16000,16000).deco
 const capSend=async(my,bytes,start,end)=>{if(!capOn)return;
  if(my.s.mime==='audio/aac')try{bytes=await toWav(bytes)}catch(e){return}
  fetch(`${WORKER}/transcribe?prompt=${encodeURIComponent(CAP.prompt.slice(-200))}`,{method:'POST',body:bytes})
-  .then(r=>r.json()).then(j=>{if(my!==mse||CAP.mode!=='sync')return;const t=capClean(j.text);if(!t)return;
+  .then(r=>r.json()).then(j=>{if(!((my===mse&&CAP.mode==='sync')||(my===fol&&CAP.mode==='pcsync')))return;const t=capClean(j.text);if(!t)return;
    CAP.prompt=(CAP.prompt+' '+t).slice(-400);capSeg(start,end,t,j.words)}).catch(()=>{})};
 // PC 스피커 등: 워커가 방송을 직접 몇 초 받아써 줌. 받는 즉시 이어서 흘려 보여 줌.
 const capLoop=async()=>{const my=capRun,s=cur;
@@ -620,7 +622,7 @@ const capLoop=async()=>{const my=capRun,s=cur;
 const CAP_LEAD=.4;
 const capCls=(i,n)=>n>=0&&i>=n-1&&i<=n+1?'wb':i<n?'wp':'';
 const capTick=()=>{const L=CAP.list;if(!L.length)return;
- const t=capClock()+(CAP.mode==='sync'?CAP_LEAD:0);let n=-1;for(let i=0;i<L.length;i++)if(L[i].t<=t)n=i;
+ const t=capClock()+(CAP.mode!=='live'?CAP_LEAD:0);let n=-1;for(let i=0;i<L.length;i++)if(L[i].t<=t)n=i;
  if(n!==CAP.now){const p=CAP.now,all=p<-1,lo=all?0:Math.max(0,Math.min(n,p)-1),hi=all?L.length-1:Math.min(L.length-1,Math.max(n,p)+1);
   for(let i=lo;i<=hi;i++){const c=capCls(i,n);if(L[i].el.className!==c)L[i].el.className=c}CAP.now=n;
   // 한글: 방금 끝난 영어 문장을 번역
@@ -642,17 +644,23 @@ const wakeUi=on=>{if(on){if(wake||wakeAsk||!('wakeLock' in navigator)||document.
 // 앱을 잠깐 내렸다 다시 열면 화면 켜 두기가 풀리므로 다시 요청
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wakeUi(!$('#cap').hidden)});
 const capUi=()=>{const show=capShow();$('#cap').hidden=!(show&&capOn);wakeUi(show&&capOn);$('#capOn').hidden=!(show&&!capOn);$('#cap').classList.toggle('ko',capKo);
- if(show&&capOn){const mode=mse&&mse.s===cur?'sync':'live';
-  if(capFor!==cur||CAP.mode!==mode){capFor=cur;capReset(mode);if(mode==='live')capLoop()}
+ if(show&&capOn){const mode=mse&&mse.s===cur?'sync':out==='pc'&&playing&&pcCode&&!cur._nofol?'pcsync':'live';
+  if(capFor!==cur||CAP.mode!==mode){capFor=cur;capReset(mode);if(mode==='live')capLoop();if(mode==='pcsync')pcFollow(cur);else folStop()}
   if(!capT)capT=setInterval(capTick,120)}
- else{capRun++;capFor=null;CAP.mode='';if(capT){clearInterval(capT);capT=null}}};
-$('#capOff').onclick=()=>{capOn=false;save('capOn',false);capUi()};
-$('#capOn').onclick=()=>{capOn=true;save('capOn',true);
- // 이 기기에서 듣는 중이면 소리에 맞춘 방식으로 다시 연결
- if(out==='phone'&&cur&&cur.cap&&(playing||want)&&!mse)play(cur);else capUi()};
-$('#capKo').onclick=()=>{capKo=!capKo;save('capKo',capKo);$('#capKo').setAttribute('aria-pressed',capKo);CAP.lastSent='';CAP.now=-2;CAP.y=null;$('#capKoLine').textContent='';capUi()};
-$('#capKo').setAttribute('aria-pressed',capKo);
-
+ else{capRun++;capFor=null;CAP.mode='';folStop();if(capT){clearInterval(capT);capT=null}}};
+// PC 스피커로 들을 때: PC 스피커 창이 자기가 곧 낼 소리를 받아써서, 단어마다 '스피커에서 나오는 시각'을 붙여
+// 워커의 자막 우편함(/pccap)에 넣어 둠. 폰은 2초마다 읽어 와 그 시각에 맞춰 짚음 (두 기기 모두 워커 시계로 맞춤).
+// 40초 동안 아무것도 안 오면(예전 PC 스피커 창) 워커가 직접 받아쓰는 '몇 초 늦음' 방식으로.
+const folStop=()=>{if(fol){fol.dead=1;fol=null}};
+const pcFollow=async s=>{folStop();const my=fol={s,dead:0,after:0,off:0,rtt:1e9,seen:new Set(),t0:Date.now(),got:0};
+ while(!my.dead&&fol===my){
+  try{const t0=Date.now(),r=await fetch(`${WORKER}/pccap?k=${encodeURIComponent(pcCode)}&after=${my.after}`,{cache:'no-store'}),j=await r.json(),t1=Date.now();
+   if(my.dead)return;
+   if(j.now&&t1-t0<my.rtt+50){my.rtt=Math.min(my.rtt,t1-t0);my.off=j.now-(t0+t1)/2}
+   if(j.ch===s.cap)for(const g of j.segs||[]){my.after=Math.max(my.after,g.at);if(my.seen.has(g.id))continue;my.seen.add(g.id);my.got=1;
+    const t=capClean(g.text);if(t){CAP.prompt=t;capSeg(g.s/1000,g.e/1000,t,g.words)}}}catch(e){}
+  if(!my.got&&Date.now()-my.t0>40000){s._nofol=1;folStop();capUi();return}
+  await new Promise(z=>setTimeout(z,2000))}};
 // PC 스피커 (노트4 서버 경유)
 let es=null,pcWait=null;
 const castOf=s=>s.kbs?{kind:'kbs',v:String(s.kbs)}:s.sbs?{kind:'sbs',v:s.sbs}:s.mbc?{kind:'mbc',v:s.mbc}:{kind:'url',v:s.u};
@@ -660,7 +668,7 @@ const pcInfo=()=>{};
 const pcTimeout=(ms,msg)=>{clearTimeout(pcWait);pcWait=setTimeout(()=>{if(out!=='pc')return;want=false;setPlaying(false);setState('응답 없음');pcInfo('노트4 서버 응답 없음');toast(msg)},ms)};
 const pcCast=s=>{if(!pcCode){setOut('phone');toast('PC 스피커 연결 링크로 이 앱을 한 번 열어 주세요');return}
  setState('PC로 보내는 중…');pcInfo('');pcListen();
- pcSend(Object.assign({a:'cast',name:s.n,vol:muted?0:+volEl.value,id:Date.now()},castOf(s)));
+ pcSend(Object.assign({a:'cast',name:s.n,vol:muted?0:+volEl.value,id:Date.now()},castOf(s),s.cap?{cap:s.cap,mime:s.mime||''}:{}));
  pcTimeout(20000,'노트4 서버가 응답하지 않아요. 노트4와 PC의 PC 스피커 창이 켜져 있는지 확인해 주세요.')};
 const pcState=m=>{if(!m||m.t!=='st'||out!=='pc')return;clearTimeout(pcWait);
  if(!m.online){want=false;setPlaying(false);setState('PC 꺼짐');pcInfo('PC의 PC 스피커 창이 닫혀 있어요');return}

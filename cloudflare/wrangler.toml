@@ -4,3 +4,11 @@ compatibility_date = "2026-11-01"
 
 [ai]
 binding = "AI"
+
+[[durable_objects.bindings]]
+name = "CAPHUB"
+class_name = "CapHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CapHub"]
