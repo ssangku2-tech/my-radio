@@ -397,7 +397,7 @@ const setState=(t)=>{const el=$('#state');el.textContent=t;el.hidden=['ON AIR','
  $('#outPc').classList.toggle('live',t==='PC에서 재생 중')};
 const killHls=()=>{if(hls){hls.destroy();hls=null}stopMse()};
 const play=async(s,isRetry)=>{
- if(!s)return;cur=s;want=true;pwrUi();if(!isRetry){retry=0;s._native=0}
+ if(!s)return;cur=s;want=true;pwrUi();if(!isRetry){retry=0;s._native=0;s._nomse=0;s._mseFail=0;s._relay=0}
  setNeedle(s);
  $('#nowName').textContent=s.n;$('#nowDesc').textContent=s.d||'';
  setState('연결 중…');save('last',s.id);
@@ -423,8 +423,9 @@ const play=async(s,isRetry)=>{
  mediaMeta();
 };
 // 자막 방송: 방송 소리를 앱이 직접 받아 재생하면서(MediaSource), 같은 소리를 4초씩 잘라 받아쓰기에 보냄.
-// 처음 5초를 모아 두고 재생을 시작하므로, 자막이 그 부분을 들을 때 맞춰 나옴.
-const CAP_SEC=4,START_BUF=5;let mse=null;
+// 받아쓰기(Groq)는 한 번에 최소 10초로 계산되어 8초씩 보냄(4초씩 보내면 한 시간 한도를 넘김).
+// 처음 9초를 모아 두고 재생을 시작하므로, 8초 조각의 자막이 그 부분이 들리기 전에 도착함.
+const CAP_SEC=8,START_BUF=9;let mse=null;
 const useMse=s=>!!(s.cap&&capOn&&!s._nomse&&window.MediaSource&&MediaSource.isTypeSupported(s.mime||'audio/mpeg'));
 const stopMse=()=>{if(mse){mse.dead=1;try{mse.ctrl.abort()}catch(e){}mse=null}};
 const joinU8=a=>{let n=0;for(const x of a)n+=x.length;const o=new Uint8Array(n);let i=0;for(const x of a){o.set(x,i);i+=x.length}return o};
@@ -439,12 +440,14 @@ const playMse=async(s,url)=>{stopMse();const my=mse={s,ctrl:new AbortController(
  sb.addEventListener('updateend',()=>{if(my.dead)return;
   if(my.pend){my.bytes.push(my.pend);my.pend=null;const e=end();
    if(e-my.start>=CAP_SEC){capSend(my,joinU8(my.bytes),my.start,e);my.start=e;my.bytes=[]}
-   if(!my.started&&e>=START_BUF){my.started=1;au.play().catch(blocked)}
+   if(!my.started&&e>=START_BUF){my.started=1;s._mseFail=0;au.play().catch(blocked)}
    const t=au.currentTime;if(t>60&&sb.buffered.start(0)<t-45){try{sb.remove(0,t-30);return}catch(x){}}}
   pump()});
- sb.addEventListener('error',()=>{if(!my.dead){s._nomse=1;fail()}});
- let r;try{r=await fetch(url,{signal:my.ctrl.signal,cache:'no-store'})}catch(e){if(!my.dead){s._nomse=1;fail()}return}
- if(!r.ok||!r.body){s._nomse=1;fail();return}
+ sb.addEventListener('error',()=>netFail());
+ const netFail=()=>{if(my.dead)return;if(!s._relay&&s.cap){s._relay=1}else{s._mseFail=(s._mseFail||0)+1;if(s._mseFail>=2)s._nomse=1}fail()};
+ // 방송 서버가 가끔 앱의 직접 받기(CORS)를 막음 → 한 번 실패하면 워커를 거쳐 받음
+ let r;try{r=await fetch(s._relay?`${WORKER}/stream?id=${s.cap}`:url,{signal:my.ctrl.signal,cache:'no-store'})}catch(e){netFail();return}
+ if(!r.ok||!r.body){netFail();return}
  const rd=r.body.getReader();
  try{while(!my.dead){const{value,done}=await rd.read();if(done)break;my.q.push(value);pump()}}catch(e){}
  if(!my.dead&&want)fail()};
@@ -593,7 +596,13 @@ const capSeg=(start,end,text,wt)=>{let ws=[];
  const frag=document.createDocumentFragment();for(const x of ws){x.el=document.createElement('span');x.el.textContent=x.w;frag.append(x.el,' ')}
  el.insertBefore(frag,at<L.length?L[at].el:null);L.splice(at,0,...ws);CAP.now=-2};
 // 앱이 재생 중인 소리 조각 → 받아쓰기
-const capSend=(my,bytes,start,end)=>{if(!capOn)return;
+const toWav=async u8=>{const b=await new OfflineAudioContext(1,16000,16000).decodeAudioData(u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.length));
+ const n=Math.round(b.duration*16000),oc=new OfflineAudioContext(1,n,16000),src=oc.createBufferSource();src.buffer=b;src.connect(oc.destination);src.start();
+ const d=(await oc.startRendering()).getChannelData(0),o=new DataView(new ArrayBuffer(44+n*2)),S=(i,t)=>{for(let k=0;k<t.length;k++)o.setUint8(i+k,t.charCodeAt(k))};
+ S(0,'RIFF');o.setUint32(4,36+n*2,true);S(8,'WAVEfmt ');o.setUint32(16,16,true);o.setUint16(20,1,true);o.setUint16(22,1,true);o.setUint32(24,16000,true);o.setUint32(28,32000,true);o.setUint16(32,2,true);o.setUint16(34,16,true);S(36,'data');o.setUint32(40,n*2,true);
+ for(let i=0;i<n;i++)o.setInt16(44+i*2,Math.max(-1,Math.min(1,d[i]))*32767,true);return new Uint8Array(o.buffer)};
+const capSend=async(my,bytes,start,end)=>{if(!capOn)return;
+ if(my.s.mime==='audio/aac')try{bytes=await toWav(bytes)}catch(e){return}
  fetch(`${WORKER}/transcribe?prompt=${encodeURIComponent(CAP.prompt.slice(-200))}`,{method:'POST',body:bytes})
   .then(r=>r.json()).then(j=>{if(my!==mse||CAP.mode!=='sync')return;const t=capClean(j.text);if(!t)return;
    CAP.prompt=(CAP.prompt+' '+t).slice(-400);capSeg(start,end,t,j.words)}).catch(()=>{})};

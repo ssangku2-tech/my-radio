@@ -1,5 +1,6 @@
 // 나만의 라디오 워커
 // GET /mbc?ch=sfm|mfm|chm   MBC는 브라우저가 방송 주소(토큰 붙은 m3u8)를 직접 받아가지 못하게 막아 두어서 대신 받아 줌.
+// GET /stream?id=bbcws      자막 방송 소리를 CORS 붙여 그대로 이어 줌
 // GET /caption?id=bbcws[&ko=1]  영어 뉴스 방송의 지금 소리를 몇 초 받아 Whisper(Workers AI)로 받아쓴 글을 돌려줌.
 //                              ko=1이면 한국어 번역도 함께. 응답: {"text": "...", "ko": "..."}
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' };
@@ -164,6 +165,14 @@ export default {
       } catch (e) {
         return errJson(e);
       }
+    }
+    // GET /stream?id=npr  자막 방송의 소리를 그대로 이어 줌 (방송 서버가 가끔 브라우저 접근(CORS)을 막을 때 앱이 대신 씀)
+    if (url.pathname === '/stream') {
+      const src = CAPTION[url.searchParams.get('id') || ''];
+      if (!src) return new Response('no such station', { status: 400, headers: CORS });
+      const r = await fetch(src, { headers: { 'User-Agent': 'Mozilla/5.0', 'Icy-MetaData': '0' } });
+      if (!r.ok || !r.body) return new Response('stream ' + r.status, { status: 502, headers: CORS });
+      return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('content-type') || 'audio/mpeg' } });
     }
     if (url.pathname === '/stt') return json({ groq: !!env.GROQ_KEY, groqOff: Math.max(0, Math.round((groqOff - Date.now()) / 1000)) });
     // GET /translate?text=...  영어 한 문장을 한국어로
