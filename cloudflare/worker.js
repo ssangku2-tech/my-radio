@@ -72,8 +72,8 @@ async function groq(env, audio, prompt) {
   if (r.status === 401 || r.status === 403) { groqOff = Date.now() + 3600e3; throw new Error('groq key ' + r.status); }
   if (!r.ok) throw new Error('groq ' + r.status + ' ' + (await r.text()).slice(0, 80));
   const o = await r.json();
-  // 말이 없는 구간(Whisper가 '말 없음'이라 본 곳)의 헛소리는 버림
-  const bad = (o.segments || []).filter(g => g.no_speech_prob > 0.6 && g.avg_logprob < -1);
+  // 말이 없는 구간(Whisper가 '말 없음'이라 본 곳)과 같은 말만 되풀이한 구간("A A A A")의 헛소리는 버림
+  const bad = (o.segments || []).filter(g => (g.no_speech_prob > 0.6 && g.avg_logprob < -1) || g.compression_ratio > 2.4);
   let words = (o.words || []).filter(w => !bad.some(g => w.start >= g.start - 0.05 && w.start < g.end));
   const segs = o.segments || [], text = segs.length ? segs.filter(g => !bad.includes(g)).map(g => String(g.text).trim()).join(' ') : o.text;
   // 단어 목록에는 문장부호가 빠져 있을 수 있음 → 글에서 같은 단어를 찾아 부호째로 바꿈 (자막을 문장·쉼표에서 끊는 데 씀)
