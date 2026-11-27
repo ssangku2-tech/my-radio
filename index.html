@@ -366,11 +366,13 @@ document.addEventListener('pointerdown',()=>{if(actx&&actx.state==='suspended'&&
 
 // 목록
 tab='all';
-const CATS=[['all','전체'],['news','뉴스'],['music','음악'],['classic','클래식'],['talk','교양']];
+// 클래식은 음악에 합쳐 보여 줌. 해외: 나라 밖 방송만
+const CATS=[['all','전체'],['news','뉴스'],['music','음악'],['talk','교양'],['abroad','해외']];
+const inCat=(s,k)=>k==='music'?s.c==='music'||s.c==='classic':k==='abroad'?s.g==='en':s.c===k;
 const listNow=()=>{
  // 전에 즐겨찾기로 골라 둔 채널(과 세계 검색에서 ＋한 채널)은 목록 맨 앞에
  const fv=favs.map(byId).filter(Boolean);let l=fv.concat(all().filter(s=>!favs.includes(s.id)));
- if(cat!=='all')l=l.filter(s=>s.c===cat);
+ if(cat!=='all')l=l.filter(s=>inCat(s,cat));
  return l};
 const render=()=>{
  $('#chips').innerHTML=CATS.map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${cat===k}">${v}</button>`).join('');
